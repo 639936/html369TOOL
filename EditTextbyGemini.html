@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Xử lý văn bản với Gemini AI</title>
+  <title>Xử lý văn bản với Gemini AI (Lưu API Key)</title>
   
   <meta name="theme-color" content="#2e86de">
 
   <style>
-    /* CSS gốc và các bổ sung mới */
+    /* ... TOÀN BỘ CSS GIỮ NGUYÊN NHƯ CŨ ... */
     :root {
         --primary-color: #2e86de;
         --secondary-color: #f2f4f8;
@@ -48,8 +48,6 @@
     button:hover:not(:disabled) { background-color: #1b4f72; }
     button:disabled { background-color: #95a5a6; cursor: not-allowed; }
     .or-separator { text-align: center; margin: 15px 0; font-weight: bold; color: #777; }
-    
-    /* CSS MỚI CHO CÀI ĐẶT NÂNG CAO */
     details { border: 1px solid var(--border-color); border-radius: 4px; padding: 15px; }
     summary { font-weight: bold; cursor: pointer; color: var(--primary-color); }
     .advanced-settings-grid {
@@ -65,8 +63,6 @@
     .checkbox-group { display: flex; align-items: center; gap: 8px; padding-top: 10px; }
     .checkbox-group input { width: auto; margin-bottom: 0; }
     .checkbox-group label { margin-bottom: 0; }
-
-    /* Result Area */
     #result-card pre {
       background-color: #eef2f7; padding: 15px; border-radius: 4px;
       white-space: pre-wrap; word-wrap: break-word; min-height: 100px;
@@ -78,6 +74,7 @@
 <body>
 
   <main>
+    <!-- ... TOÀN BỘ PHẦN HTML TRONG BODY GIỮ NGUYÊN ... -->
     <h1>Xử lý văn bản với Gemini AI</h1>
     <p>Nhập văn bản, API key, prompt và nhận kết quả xử lý trực tiếp từ Gemini.</p>
 
@@ -86,9 +83,7 @@
       <h2>1. Cung cấp văn bản cần xử lý</h2>
       <label for="textInput">Nhập văn bản vào ô dưới đây:</label>
       <textarea id="textInput" rows="10" placeholder="Nhập hoặc dán văn bản của bạn vào đây..."></textarea>
-      
       <div class="or-separator">HOẶC</div>
-
       <label for="fileInput">Tải lên tệp tin (.txt):</label>
       <input type="file" id="fileInput" accept=".txt">
     </div>
@@ -98,12 +93,11 @@
       <h2>2. Cấu hình API & Prompt</h2>
       <label for="apiKeyInput">API Key của bạn:</label>
       <input type="password" id="apiKeyInput" placeholder="Nhập API Key của bạn từ Google AI Studio" required>
-
       <label for="promptInput">Prompt (Yêu cầu):</label>
       <textarea id="promptInput" rows="4" required>Chỉ trả về văn bản đã xử lý. Giữ nguyên định dạng, bố cục của văn bản gốc.</textarea>
     </div>
 
-    <!-- CARD 3: ADVANCED SETTINGS (GIAO DIỆN MỚI) -->
+    <!-- CARD 3: ADVANCED SETTINGS -->
     <div class="card">
         <details>
             <summary>Cài đặt nâng cao (Tùy chọn)</summary>
@@ -128,7 +122,7 @@
                 </div>
                 <div class="form-group">
                     <label for="max-tokens">Max Output Tokens</label>
-                    <input type="number" id="max-tokens" value="2048" min="1">
+                    <input type="number" id="max-tokens" value="65536" min="1">
                 </div>
                 <div class="form-group">
                     <div class="checkbox-group">
@@ -162,13 +156,12 @@
     // Lấy các element từ DOM
     const textInput = document.getElementById('textInput');
     const fileInput = document.getElementById('fileInput');
-    const apiKeyInput = document.getElementById('apiKeyInput');
+    const apiKeyInput = document.getElementById('apiKeyInput'); // <-- Biến này đã có sẵn
     const promptInput = document.getElementById('promptInput');
     const submitBtn = document.getElementById('submitBtn');
     const resultOutput = document.getElementById('resultOutput');
     const loadingIndicator = document.getElementById('loading-indicator');
     
-    // Lấy các element cài đặt nâng cao MỚI
     const temperatureSlider = document.getElementById('temperature');
     const temperatureValue = document.getElementById('temperature-value');
     const topPSlider = document.getElementById('top-p');
@@ -177,26 +170,31 @@
     const maxTokensInput = document.getElementById('max-tokens');
     const disableSafetyCheckbox = document.getElementById('disable-safety');
 
-    // Cập nhật giá trị hiển thị của slider
+    // --- PHẦN MÃ MỚI ĐỂ LƯU API KEY ---
+    const API_KEY_STORAGE_KEY = 'geminiTextProcessor_apiKey';
+
+    function saveApiKeyToStorage() {
+        // Cảnh báo: API Key đang được lưu dưới dạng văn bản thuần túy.
+        // Chỉ nên dùng cho mục đích cá nhân.
+        localStorage.setItem(API_KEY_STORAGE_KEY, apiKeyInput.value);
+    }
+
+    function loadApiKeyFromStorage() {
+        const savedKey = localStorage.getItem(API_KEY_STORAGE_KEY);
+        if (savedKey) {
+            apiKeyInput.value = savedKey;
+            console.log('API Key đã được tải từ localStorage.');
+        }
+    }
+    // --- KẾT THÚC PHẦN MÃ MỚI ---
+
+
     function updateSliderDisplay() {
         temperatureValue.textContent = temperatureSlider.value;
         topPValue.textContent = topPSlider.value;
     }
-    temperatureSlider.addEventListener('input', updateSliderDisplay);
-    topPSlider.addEventListener('input', updateSliderDisplay);
-    updateSliderDisplay(); // Khởi tạo giá trị ban đầu
 
-    // Xử lý khi người dùng chọn file
-    fileInput.addEventListener('change', (event) => {
-      const file = event.target.files[0];
-      if (!file) { return; }
-      
-      const reader = new FileReader();
-      reader.onload = (e) => { textInput.value = e.target.result; };
-      reader.readAsText(file);
-    });
-
-    // Hàm chính để gọi API Gemini
+    // ... Toàn bộ các hàm khác như callGeminiApi, etc. giữ nguyên ...
     async function callGeminiApi() {
       const apiKey = apiKeyInput.value.trim();
       const userPrompt = promptInput.value.trim();
@@ -214,7 +212,6 @@
       try {
         const genAI = new GoogleGenerativeAI(apiKey);
         
-        // --- BUILD CONFIGURATION (ĐÃ CẬP NHẬT) ---
         const generationConfig = {
           temperature: parseFloat(temperatureSlider.value),
           topK: parseInt(topKInput.value, 10),
@@ -224,7 +221,6 @@
 
         let safetySettings;
         if (disableSafetyCheckbox.checked) {
-            // Nếu checkbox được chọn, tắt tất cả các bộ lọc an toàn
             safetySettings = [
                 { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
                 { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
@@ -232,7 +228,6 @@
                 { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
             ];
         } else {
-            // Mặc định, giữ cài đặt an toàn ở mức trung bình trở lên
              safetySettings = [
                 { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
                 { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
@@ -252,7 +247,6 @@
         const result = await model.generateContent(fullPrompt);
         const response = await result.response;
         const text = response.text();
-
         resultOutput.textContent = text;
         
       } catch (error) {
@@ -264,7 +258,25 @@
       }
     }
 
+    // --- GẮN CÁC SỰ KIỆN ---
+
+    // Chạy các hàm khởi tạo
+    updateSliderDisplay();
+    loadApiKeyFromStorage(); // <-- Tải key khi trang được mở
+
+    // Gắn sự kiện cho các element
+    apiKeyInput.addEventListener('input', saveApiKeyToStorage); // <-- Lưu key mỗi khi người dùng nhập
+    temperatureSlider.addEventListener('input', updateSliderDisplay);
+    topPSlider.addEventListener('input', updateSliderDisplay);
+    fileInput.addEventListener('change', (event) => {
+      const file = event.target.files[0];
+      if (!file) { return; }
+      const reader = new FileReader();
+      reader.onload = (e) => { textInput.value = e.target.result; };
+      reader.readAsText(file);
+    });
     submitBtn.addEventListener('click', callGeminiApi);
+
   </script>
 </body>
 </html>
