@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Công cụ Dịch Phụ Đề bằng Gemini</title>
+    <style>
+        :root {
+            --primary-color: #4a90e2;
+            --secondary-color: #f5f7fa;
+            --text-color: #333;
+            --border-color: #dce1e6;
+            --success-color: #28a745;
+            --error-color: #dc3545;
+            --warning-color: #ffc107;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+        body {
+            font-family: var(--font-family);
+            background-color: var(--secondary-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            width: 100%;
+            max-width: 900px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            padding: 25px;
+        }
+        h1 {
+            color: var(--primary-color);
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        .settings-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        .form-group label {
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid var(--border-color);
+            font-size: 14px;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        /* Advanced Settings */
+        .advanced-settings {
+            margin-bottom: 20px;
+            border-top: 1px solid var(--border-color);
+            padding-top: 15px;
+        }
+        .advanced-settings summary {
+            font-weight: 600;
+            cursor: pointer;
+            color: var(--primary-color);
+            padding: 5px 0;
+        }
+        .advanced-settings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .range-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .range-group input[type="range"] {
+            flex-grow: 1;
+        }
+        .range-group .value-display {
+            font-weight: bold;
+            min-width: 30px;
+        }
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        /* Tabs */
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid var(--border-color);
+            margin-bottom: 20px;
+        }
+        .tab-button {
+            padding: 12px 20px; cursor: pointer; border: none; background-color: transparent;
+            font-size: 16px; font-weight: 500; position: relative; color: #555; transition: color 0.3s;
+        }
+        .tab-button.active { color: var(--primary-color); }
+        .tab-button.active::after {
+            content: ''; position: absolute; bottom: -2px; left: 0;
+            width: 100%; height: 2px; background-color: var(--primary-color);
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .main-textarea { width: 100%; height: 200px; margin-bottom: 15px; }
+        .action-button {
+            display: inline-block; background-color: var(--primary-color); color: white;
+            padding: 12px 25px; border: none; border-radius: 5px; cursor: pointer;
+            font-size: 16px; font-weight: 600; transition: background-color 0.3s;
+        }
+        .action-button:hover:not(:disabled) { background-color: #357abd; }
+        .action-button:disabled { background-color: #a0c3e8; cursor: not-allowed; }
+        .file-input-wrapper {
+            border: 2px dashed var(--border-color); padding: 20px; text-align: center;
+            border-radius: 5px; margin-bottom: 15px;
+        }
+        .file-input-wrapper label { cursor: pointer; color: var(--primary-color); font-weight: 600; }
+        #file-name-txt, #file-name-srt { margin-top: 10px; font-style: italic; }
+        input[type="file"] { display: none; }
+        .results-container { margin-top: 25px; border-top: 1px solid var(--border-color); padding-top: 20px; }
+        .result-item {
+            background-color: var(--secondary-color); border: 1px solid var(--border-color);
+            border-radius: 5px; padding: 15px; margin-bottom: 12px;
+        }
+        .result-item .original-text {
+            font-size: 14px; color: #666; margin-bottom: 10px;
+            padding-bottom: 10px; border-bottom: 1px dashed #ccc;
+        }
+        .result-item .translated-content { display: flex; align-items: center; justify-content: space-between; }
+        .result-item .translated-text { font-size: 15px; font-weight: 500; flex-grow: 1; margin-right: 15px; }
+        .copy-button {
+            background-color: #fff; border: 1px solid var(--border-color); color: var(--primary-color);
+            padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; white-space: nowrap;
+        }
+        .copy-button:hover { background-color: var(--secondary-color); }
+        .status-message { margin-top: 15px; padding: 12px; border-radius: 5px; text-align: center; }
+        .status-message.loading { background-color: #e6f7ff; border: 1px solid #91d5ff; color: #096dd9; }
+        .status-message.error { background-color: #fff1f0; border: 1px solid #ffa39e; color: var(--error-color); }
+        .status-message.success { background-color: #f6ffed; border: 1px solid #b7eb8f; color: var(--success-color); }
+        .srt-preview-container { margin-top: 25px; border-top: 1px solid var(--border-color); padding-top: 20px; }
+        .srt-preview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .srt-preview-col h3 { text-align: center; border-bottom: 2px solid var(--primary-color); padding-bottom: 10px; }
+        .srt-line {
+            background-color: var(--secondary-color); padding: 10px; border-radius: 4px;
+            margin-bottom: 8px; font-family: "Courier New", Courier, monospace;
+        }
+        .srt-line .timestamp { font-size: 12px; color: #555; font-weight: bold; }
+        .srt-line-content { display: flex; align-items: center; justify-content: space-between; margin-top: 5px; }
+        .srt-text { flex-grow: 1; margin-right: 10px; font-family: var(--font-family); font-size: 15px; }
+        #generate-srt-button { margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Công cụ Dịch Phụ Đề (VI → EN)</h1>
+
+    <div class="settings-grid">
+        <div class="form-group">
+            <label for="api-key">Gemini API Key</label>
+            <input type="password" id="api-key" placeholder="Dán API Key của bạn vào đây">
+        </div>
+        <div class="form-group">
+            <label for="prompt">Prompt tùy chỉnh</label>
+            <textarea id="prompt">Dịch các dòng phụ đề sau từ Tiếng Việt sang Tiếng Anh. Đảm bảo bản dịch tự nhiên, chính xác chủ vị, phù hợp ngữ cảnh đối thoại của các nhân vật. QUAN TRỌNG: Phải trả về số lượng dòng chính xác bằng với số dòng đầu vào. Mỗi dòng đầu ra phải tương ứng trực tiếp với một dòng đầu vào. Không gộp hoặc bỏ sót dòng. Nếu số dòng đầu vào sau khi dịch bị giảm đi thì tách câu đã dịch hợp lý để trả về số dòng không thay đổi. Chỉ trả về nội dung đã dịch, không trả về bất cứ nội dung nào khác, mỗi câu dịch trên một dòng riêng biệt.</textarea>
+        </div>
+    </div>
+
+    <!-- Advanced Settings -->
+    <details class="advanced-settings">
+        <summary>Cài đặt nâng cao (Tùy chọn)</summary>
+        <div class="advanced-settings-grid">
+            <div class="form-group">
+                <label for="temperature">Temperature (Sáng tạo)</label>
+                <div class="range-group">
+                    <input type="range" id="temperature" min="0" max="1" step="0.1" value="0.5">
+                    <span id="temperature-value" class="value-display">0.5</span>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="top-p">Top P</label>
+                <div class="range-group">
+                    <input type="range" id="top-p" min="0" max="1" step="0.1" value="1">
+                    <span id="top-p-value" class="value-display">1.0</span>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="top-k">Top K</label>
+                <input type="number" id="top-k" value="1" min="1">
+            </div>
+            <div class="form-group">
+                <label for="max-tokens">Max Output Tokens</label>
+                <input type="number" id="max-tokens" value="65536" min="1">
+            </div>
+            <div class="form-group">
+                <div class="checkbox-group">
+                    <input type="checkbox" id="disable-safety" style="width: auto;">
+                    <label for="disable-safety" style="margin-bottom: 0;">Tắt bộ lọc an toàn</label>
+                </div>
+            </div>
+        </div>
+    </details>
+
+    <div class="tabs">
+        <button class="tab-button active" data-tab="text-input">Dịch văn bản</button>
+        <button class="tab-button" data-tab="txt-file">Dịch từ file .TXT</button>
+        <button class="tab-button" data-tab="srt-file">Dịch từ file .SRT</button>
+    </div>
+
+    <div id="status"></div>
+
+    <!-- Tab 1: Dịch văn bản nhập -->
+    <div id="text-input-tab" class="tab-content active">
+        <textarea id="text-input" class="main-textarea" placeholder="Nhập mỗi phụ đề trên một dòng..."></textarea>
+        <button id="translate-text-btn" class="action-button">Dịch</button>
+        <div id="text-results" class="results-container"></div>
+    </div>
+
+    <!-- Tab 2: Dịch từ file .TXT -->
+    <div id="txt-file-tab" class="tab-content">
+        <div class="file-input-wrapper">
+            <label for="txt-file-input">Nhấp để chọn file .TXT</label>
+            <input type="file" id="txt-file-input" accept=".txt">
+            <p id="file-name-txt"></p>
+        </div>
+        <button id="translate-txt-btn" class="action-button" disabled>Dịch file TXT</button>
+        <div id="txt-results" class="results-container"></div>
+    </div>
+
+    <!-- Tab 3: Dịch từ file .SRT -->
+    <div id="srt-file-tab" class="tab-content">
+        <div class="file-input-wrapper">
+            <label for="srt-file-input">Nhấp để chọn file .SRT</label>
+            <input type="file" id="srt-file-input" accept=".srt, .SRT">
+            <p id="file-name-srt"></p>
+        </div>
+        <button id="translate-srt-btn" class="action-button" disabled>Dịch file SRT</button>
+        <div id="srt-preview-container" style="display: none;">
+            <h2>Xem trước phụ đề song ngữ</h2>
+            <div class="srt-preview-grid">
+                <div class="srt-preview-col" id="srt-preview-en"><h3>Phụ đề Tiếng Anh (Đã dịch)</h3></div>
+                <div class="srt-preview-col" id="srt-preview-vi"><h3>Phụ đề Tiếng Việt (Gốc)</h3></div>
+            </div>
+            <button id="generate-srt-button" class="action-button">Tạo & Tải file .SRT song ngữ</button>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Get all DOM Elements ---
+    const apiKeyInput = document.getElementById('api-key');
+    const promptInput = document.getElementById('prompt');
+    const statusDiv = document.getElementById('status');
+    let srtData = []; 
+
+    // Advanced Settings Elements
+    const temperatureSlider = document.getElementById('temperature');
+    const temperatureValue = document.getElementById('temperature-value');
+    const topPSlider = document.getElementById('top-p');
+    const topPValue = document.getElementById('top-p-value');
+    const topKInput = document.getElementById('top-k');
+    const maxTokensInput = document.getElementById('max-tokens');
+    const disableSafetyCheckbox = document.getElementById('disable-safety');
+
+    // --- Event Listeners for Advanced Settings ---
+    temperatureSlider.addEventListener('input', () => {
+        temperatureValue.textContent = temperatureSlider.value;
+    });
+    topPSlider.addEventListener('input', () => {
+        topPValue.textContent = parseFloat(topPSlider.value).toFixed(1);
+    });
+
+    // --- Tab Logic ---
+    const tabs = document.querySelectorAll('.tab-button');
+    const tabContents = document.querySelectorAll('.tab-content');
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            tabs.forEach(item => item.classList.remove('active'));
+            tab.classList.add('active');
+            const targetId = tab.dataset.tab + '-tab';
+            const target = document.getElementById(targetId);
+            tabContents.forEach(content => content.classList.remove('active'));
+            if(target) {
+                target.classList.add('active');
+            }
+            clearAllResults();
+        });
+    });
+
+    // --- Core Translation Logic ---
+    async function getTranslation(textToTranslate) {
+        const apiKey = apiKeyInput.value.trim();
+        if (!apiKey) {
+            showStatus('Vui lòng nhập Gemini API Key.', 'error');
+            return null;
+        }
+
+        showStatus('Đang kết nối tới Gemini và dịch...', 'loading');
+
+        const generationConfig = {
+            temperature: parseFloat(temperatureSlider.value),
+            topP: parseFloat(topPSlider.value),
+            topK: parseInt(topKInput.value, 10),
+            maxOutputTokens: parseInt(maxTokensInput.value, 10),
+            stopSequences: []
+        };
+
+        const safetySettings = disableSafetyCheckbox.checked ? [
+            { "category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE" },
+            { "category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE" },
+            { "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE" },
+            { "category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE" }
+        ] : [];
+
+        const userPrompt = promptInput.value.trim();
+        const fullPrompt = `${userPrompt}\n\n--- INPUT ---\n${textToTranslate}\n\n--- TRANSLATION ---`;
+        const requestBody = {
+            contents: [{ parts: [{ text: fullPrompt }] }],
+            generationConfig,
+            safetySettings
+        };
+
+        try {
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestBody)
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error?.message || `Lỗi HTTP: ${response.status}`);
+            }
+            
+            if (!data.candidates || data.candidates.length === 0) {
+                 if(data.promptFeedback?.blockReason){
+                    throw new Error(`Yêu cầu bị chặn: ${data.promptFeedback.blockReason}. Thử điều chỉnh prompt hoặc cài đặt an toàn.`);
+                 }
+                 throw new Error("API không trả về kết quả.");
+            }
+            if (!data.candidates[0].content?.parts?.[0]?.text) {
+                const finishReason = data.candidates[0].finishReason;
+                throw new Error(`Phản hồi rỗng. Lý do: ${finishReason || 'Không xác định'}. Có thể do bộ lọc an toàn.`);
+            }
+
+            showStatus('Dịch thành công!', 'success');
+            return data.candidates[0].content.parts[0].text;
+        } catch (error) {
+            console.error('Lỗi API:', error);
+            showStatus(`Đã xảy ra lỗi: ${error.message}`, 'error');
+            return null;
+        }
+    }
+
+    // --- Helper Functions ---
+    function showStatus(message, type) {
+        statusDiv.innerHTML = `<div class="status-message ${type}">${message}</div>`;
+    }
+
+    function clearStatus() { statusDiv.innerHTML = ''; }
+    
+    function clearAllResults() {
+        document.getElementById('text-results').innerHTML = '';
+        document.getElementById('txt-results').innerHTML = '';
+        document.getElementById('srt-preview-container').style.display = 'none';
+        document.getElementById('srt-preview-en').innerHTML = '<h3>Phụ đề Tiếng Anh (Đã dịch)</h3>';
+        document.getElementById('srt-preview-vi').innerHTML = '<h3>Phụ đề Tiếng Việt (Gốc)</h3>';
+        clearStatus();
+    }
+
+    function displaySimpleResults(originalLines, translatedLines, container) {
+        container.innerHTML = '';
+        originalLines.forEach((originalLine, index) => {
+            const translatedLine = translatedLines[index] || '(Lỗi: Không có bản dịch cho dòng này)';
+            const item = document.createElement('div');
+            item.className = 'result-item';
+            item.innerHTML = `
+                <div class="original-text">${escapeHtml(originalLine)}</div>
+                <div class="translated-content">
+                    <div class="translated-text">${escapeHtml(translatedLine)}</div>
+                    <button class="copy-button">Copy</button>
+                </div>
+            `;
+            item.querySelector('.copy-button').addEventListener('click', (e) => {
+                navigator.clipboard.writeText(translatedLine);
+                e.target.textContent = 'Đã copy!';
+                setTimeout(() => { e.target.textContent = 'Copy'; }, 2000);
+            });
+            container.appendChild(item);
+        });
+    }
+
+    function escapeHtml(unsafe) {
+        return unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    // --- Tab 1: Text Input ---
+    document.getElementById('translate-text-btn').addEventListener('click', async () => {
+        const textInput = document.getElementById('text-input').value.trim();
+        if (!textInput) {
+            showStatus('Vui lòng nhập văn bản cần dịch.', 'error');
+            return;
+        }
+        const originalLines = textInput.split('\n').filter(line => line.trim() !== '');
+        const translatedText = await getTranslation(originalLines.join('\n'));
+        if (translatedText) {
+            const translatedLines = translatedText.split('\n');
+            if (originalLines.length !== translatedLines.length) {
+                showStatus(`Cảnh báo: Số dòng dịch (${translatedLines.length}) không khớp số dòng gốc (${originalLines.length}).`, 'warning');
+            }
+            displaySimpleResults(originalLines, translatedLines, document.getElementById('text-results'));
+        }
+    });
+
+    // --- Tab 2: TXT File ---
+    const txtFileInput = document.getElementById('txt-file-input');
+    const translateTxtBtn = document.getElementById('translate-txt-btn');
+    txtFileInput.addEventListener('change', () => {
+        if (txtFileInput.files.length > 0) {
+            document.getElementById('file-name-txt').textContent = `File đã chọn: ${txtFileInput.files[0].name}`;
+            translateTxtBtn.disabled = false;
+        } else {
+            document.getElementById('file-name-txt').textContent = '';
+            translateTxtBtn.disabled = true;
+        }
+    });
+    translateTxtBtn.addEventListener('click', () => {
+        const file = txtFileInput.files[0];
+        if (!file) { return; }
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const originalLines = e.target.result.trim().split(/\r?\n/).filter(line => line.trim() !== '');
+            const translatedText = await getTranslation(originalLines.join('\n'));
+            if (translatedText) {
+                const translatedLines = translatedText.split('\n');
+                 if (originalLines.length !== translatedLines.length) {
+                    showStatus(`Cảnh báo: Số dòng dịch (${translatedLines.length}) không khớp số dòng gốc (${originalLines.length}).`, 'warning');
+                }
+                displaySimpleResults(originalLines, translatedLines, document.getElementById('txt-results'));
+            }
+        };
+        reader.readAsText(file);
+    });
+
+    // --- Tab 3: SRT File ---
+    const srtFileInput = document.getElementById('srt-file-input');
+    const translateSrtBtn = document.getElementById('translate-srt-btn');
+    srtFileInput.addEventListener('change', () => {
+        if (srtFileInput.files.length > 0) {
+            document.getElementById('file-name-srt').textContent = `File đã chọn: ${srtFileInput.files[0].name}`;
+            translateSrtBtn.disabled = false;
+        } else {
+            document.getElementById('file-name-srt').textContent = '';
+            translateSrtBtn.disabled = true;
+        }
+    });
+    
+    // --- START: HÀM PARSE SRT ĐÃ ĐƯỢC SỬA LỖI ---
+    function parseSrt(srtContent) {
+        // Chuẩn hóa xuống dòng và loại bỏ khoảng trắng thừa
+        const normalizedContent = srtContent.replace(/\r\n/g, '\n').trim();
+        // Tách file thành các khối phụ đề. Một khối được ngăn cách bởi một hoặc nhiều dòng trống.
+        const blocks = normalizedContent.split(/\n\n+/);
+        
+        const subtitles = [];
+
+        for (const block of blocks) {
+            if (!block.trim()) continue; // Bỏ qua các khối trống
+
+            const lines = block.trim().split('\n');
+            
+            // Tìm dòng chứa timestamp (dấu hiệu nhận biết quan trọng nhất)
+            let timeLineIndex = -1;
+            for (let i = 0; i < lines.length; i++) {
+                if (lines[i].includes('-->')) {
+                    timeLineIndex = i;
+                    break;
+                }
+            }
+            
+            if (timeLineIndex !== -1) {
+                const id = timeLineIndex > 0 ? lines[timeLineIndex - 1].trim() : (subtitles.length + 1).toString();
+                const timestamp = lines[timeLineIndex].trim();
+                const text = lines.slice(timeLineIndex + 1).join('\n').trim();
+
+                if (text) { // Chỉ thêm phụ đề nếu có nội dung
+                    subtitles.push({
+                        id: id,
+                        timestamp: timestamp,
+                        text: text
+                    });
+                }
+            }
+        }
+        return subtitles;
+    }
+    // --- END: HÀM PARSE SRT ĐÃ ĐƯỢC SỬA LỖI ---
+
+    translateSrtBtn.addEventListener('click', () => {
+        const file = srtFileInput.files[0];
+        if (!file) { return; }
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const originalSubs = parseSrt(e.target.result);
+            if(originalSubs.length === 0) {
+                showStatus('Không tìm thấy phụ đề nào trong file hoặc định dạng file không đúng.', 'error'); return;
+            }
+            const originalLines = originalSubs.map(sub => sub.text);
+            const translatedText = await getTranslation(originalLines.join('\n'));
+            if (translatedText) {
+                const translatedLines = translatedText.split('\n');
+                if (originalLines.length !== translatedLines.length) {
+                    showStatus(`Cảnh báo: Số dòng dịch (${translatedLines.length}) không khớp số dòng gốc (${originalLines.length}).`, 'warning');
+                }
+                srtData = originalSubs.map((sub, index) => ({
+                    ...sub,
+                    translatedText: translatedLines[index] || '(Lỗi dịch)'
+                }));
+                displaySrtPreview(srtData);
+            }
+        };
+        reader.readAsText(file, 'UTF-8'); // Thêm 'UTF-8' để đảm bảo đọc đúng tiếng Việt có dấu
+    });
+
+    function displaySrtPreview(data) {
+        const previewEn = document.getElementById('srt-preview-en');
+        const previewVi = document.getElementById('srt-preview-vi');
+        previewEn.innerHTML = '<h3>Phụ đề Tiếng Anh (Đã dịch)</h3>';
+        previewVi.innerHTML = '<h3>Phụ đề Tiếng Việt (Gốc)</h3>';
+        data.forEach(sub => {
+            // English Column
+            const enLine = document.createElement('div');
+            enLine.className = 'srt-line';
+            enLine.innerHTML = `<div class="timestamp">${escapeHtml(sub.timestamp)}</div><div class="srt-line-content"><div class="srt-text">${escapeHtml(sub.translatedText)}</div><button class="copy-button">Copy</button></div>`;
+            enLine.querySelector('.copy-button').addEventListener('click', e => {
+                navigator.clipboard.writeText(sub.translatedText);
+                e.target.textContent = 'Đã copy!';
+                setTimeout(() => { e.target.textContent = 'Copy'; }, 2000);
+            });
+            previewEn.appendChild(enLine);
+            // Vietnamese Column
+            const viLine = document.createElement('div');
+            viLine.className = 'srt-line';
+            viLine.innerHTML = `<div class="timestamp">${escapeHtml(sub.timestamp)}</div><div class="srt-line-content"><div class="srt-text">${escapeHtml(sub.text)}</div><button class="copy-button">Copy</button></div>`;
+            viLine.querySelector('.copy-button').addEventListener('click', e => {
+                navigator.clipboard.writeText(sub.text);
+                e.target.textContent = 'Đã copy!';
+                setTimeout(() => { e.target.textContent = 'Copy'; }, 2000);
+            });
+            previewVi.appendChild(viLine);
+        });
+        document.getElementById('srt-preview-container').style.display = 'block';
+    }
+
+    document.getElementById('generate-srt-button').addEventListener('click', () => {
+        if (srtData.length === 0) return;
+        let srtFileContent = '';
+        let counter = 1;
+        // Vietnamese subs
+        srtData.forEach(sub => {
+            srtFileContent += `${counter++}\n${sub.timestamp}\n${sub.text}\n\n`;
+        });
+        // English subs
+        srtData.forEach(sub => {
+            srtFileContent += `${counter++}\n${sub.timestamp}\n${sub.translatedText}\n\n`;
+        });
+        const blob = new Blob([srtFileContent], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const originalFileName = srtFileInput.files[0]?.name.replace(/\.srt$/i, '') || 'subtitles';
+        a.download = `${originalFileName}_bilingual.srt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    });
+});
+</script>
+
+</body>
+</html>
