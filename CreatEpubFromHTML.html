@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            
+    <title>EPUB Creator Userscript</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f7fa;
+            color: #333;
+        }
+        
+        .container {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            padding: 25px;
+            margin-top: 20px;
+        }
+        
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 15px;
+        }
+        
+        .drop-area {
+            border: 3px dashed #3498db;
+            border-radius: 8px;
+            padding: 40px 20px;
+            text-align: center;
+            background-color: #e8f4fc;
+            margin-bottom: 25px;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        
+        .drop-area:hover, .drop-area.drag-over {
+            background-color: #d1e8ff;
+            border-color: #2980b9;
+        }
+        
+        .drop-area p {
+            margin: 0;
+            font-size: 18px;
+            color: #3498db;
+        }
+        
+        .drop-area i {
+            font-size: 48px;
+            color: #3498db;
+            margin-bottom: 15px;
+            display: block;
+        }
+        
+        .file-list {
+            margin: 25px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .file-list-header {
+            background-color: #f8f9fa;
+            padding: 12px 15px;
+            border-bottom: 1px solid #ddd;
+            font-weight: bold;
+            display: grid;
+            grid-template-columns: 1fr 120px 100px;
+            gap: 15px;
+        }
+        
+        .file-item {
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+            display: grid;
+            grid-template-columns: 1fr 120px 100px;
+            gap: 15px;
+            transition: background-color 0.2s;
+        }
+        
+        .file-item:hover {
+            background-color: #f9f9f9;
+        }
+        
+        .file-item:last-child {
+            border-bottom: none;
+        }
+        
+        .file-name {
+            word-break: break-all;
+        }
+        
+        .file-size, .file-modified {
+            text-align: right;
+            color: #666;
+        }
+        
+        .actions {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 25px;
+        }
+        
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .btn-primary {
+            background-color: #3498db;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(52, 152, 219, 0.3);
+        }
+        
+        .btn-primary:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .btn-secondary {
+            background-color: #e74c3c;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #c0392b;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(231, 76, 60, 0.3);
+        }
+        
+        .status {
+            text-align: center;
+            margin: 20px 0;
+            min-height: 24px;
+            font-weight: 500;
+        }
+        
+        .progress-container {
+            height: 10px;
+            background-color: #ecf0f1;
+            border-radius: 5px;
+            margin: 30px 0;
+            overflow: hidden;
+            display: none;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background-color: #3498db;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Tạo EPUB từ HTML</h1>
+        
+        <div class="drop-area" id="dropArea">
+            <i>📁</i>
+            <p>Kéo và thả file HTML vào đây hoặc nhấn để chọn file</p>
+            <input type="file" id="fileInput" accept=".html,.htm" multiple style="display: none;">
+        </div>
+        
+        <div class="file-list" id="fileList" style="display: none;">
+            <div class="file-list-header">
+                <div class="file-name">Tên file</div>
+                <div class="file-size">Kích thước</div>
+                <div class="file-modified">Ngày sửa</div>
+            </div>
+            <div id="fileItems"></div>
+        </div>
+        
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+        
+        <div class="status" id="status"></div>
+        
+        <div class="actions">
+            <button class="btn btn-primary" id="createEpubBtn" disabled>
+                <span id="buttonText">Tạo EPUB</span>
+            </button>
+            <button class="btn btn-secondary" id="clearBtn" disabled>Xóa tất cả</button>
+        </div>
+    </div>
+
+    <script>
+        // Khởi tạo biến toàn cục
+        let htmlFiles = [];
+        const dropArea = document.getElementById('dropArea');
+        const fileInput = document.getElementById('fileInput');
+        const fileList = document.getElementById('fileList');
+        const fileItems = document.getElementById('fileItems');
+        const createEpubBtn = document.getElementById('createEpubBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const status = document.getElementById('status');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const buttonText = document.getElementById('buttonText');
+
+        // Sự kiện khi kéo file vào khu vực
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropArea.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight() {
+            dropArea.classList.add('drag-over');
+        }
+
+        function unhighlight() {
+            dropArea.classList.remove('drag-over');
+        }
+
+        // Sự kiện khi thả file
+        dropArea.addEventListener('drop', handleDrop, false);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleFiles(files);
+        }
+
+        // Sự kiện khi click vào khu vực thả file
+        dropArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        // Sự kiện khi chọn file qua input
+        fileInput.addEventListener('change', () => {
+            handleFiles(fileInput.files);
+        });
+
+        // Xử lý file được chọn
+        function handleFiles(files) {
+            const newFiles = Array.from(files).filter(file => 
+                file.type === 'text/html' || file.name.toLowerCase().endsWith('.html') || file.name.toLowerCase().endsWith('.htm')
+            );
+            
+            if (newFiles.length === 0) {
+                status.textContent = 'Vui lòng chọn file HTML (.html hoặc .htm)';
+                return;
+            }
+            
+            // Thêm file mới vào danh sách
+            htmlFiles = htmlFiles.concat(newFiles);
+            
+            // Sắp xếp file theo ngày sửa đổi (cũ nhất trước)
+            htmlFiles.sort((a, b) => a.lastModified - b.lastModified);
+            
+            // Hiển thị danh sách file
+            renderFileList();
+            
+            // Hiển thị danh sách file
+            fileList.style.display = 'block';
+            
+            // Kích hoạt nút tạo EPUB và xóa
+            createEpubBtn.disabled = false;
+            clearBtn.disabled = false;
+            
+            status.textContent = `Đã chọn ${htmlFiles.length} file HTML. Sắp xếp theo ngày sửa đổi.`;
+        }
+
+        // Hiển thị danh sách file
+        function renderFileList() {
+            fileItems.innerHTML = '';
+            
+            htmlFiles.forEach((file, index) => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+                
+                const fileSize = formatFileSize(file.size);
+                const modifiedDate = formatDate(file.lastModified);
+                
+                fileItem.innerHTML = `
+                    <div class="file-name">${file.name}</div>
+                    <div class="file-size">${fileSize}</div>
+                    <div class="file-modified">${modifiedDate}</div>
+                `;
+                
+                fileItems.appendChild(fileItem);
+            });
+        }
+
+        // Định dạng kích thước file
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // Định dạng ngày tháng
+        function formatDate(timestamp) {
+            const date = new Date(timestamp);
+            return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+        }
+
+        // Sự kiện khi nhấn nút Xóa tất cả
+        clearBtn.addEventListener('click', () => {
+            htmlFiles = [];
+            fileList.style.display = 'none';
+            createEpubBtn.disabled = true;
+            clearBtn.disabled = true;
+            status.textContent = 'Đã xóa tất cả file. Vui lòng chọn file mới.';
+        });
+
+        // Sự kiện khi nhấn nút Tạo EPUB
+        createEpubBtn.addEventListener('click', async () => {
+            if (htmlFiles.length === 0) {
+                status.textContent = 'Vui lòng chọn ít nhất một file HTML.';
+                return;
+            }
+            
+            // Ẩn nút và hiển thị thanh tiến trình
+            createEpubBtn.disabled = true;
+            clearBtn.disabled = true;
+            buttonText.innerHTML = '<span class="loading"></span> Đang tạo EPUB...';
+            progressContainer.style.display = 'block';
+            status.textContent = 'Đang xử lý các file HTML...';
+            
+            try {
+                // Tạo EPUB
+                const epubBlob = await createEpub();
+                
+                // Tải xuống file
+                const fileName = getFileNameWithoutExtension(htmlFiles[0].name) + '.epub';
+                downloadFile(epubBlob, fileName);
+                
+                // Cập nhật trạng thái
+                status.textContent = `Đã tạo thành công file EPUB: ${fileName}`;
+                progressBar.style.width = '100%';
+                
+                // Đặt lại nút sau 2 giây
+                setTimeout(() => {
+                    buttonText.textContent = 'Tạo EPUB';
+                    progressContainer.style.display = 'none';
+                    createEpubBtn.disabled = false;
+                    clearBtn.disabled = false;
+                    progressBar.style.width = '0%';
+                }, 2000);
+            } catch (error) {
+                status.textContent = 'Lỗi khi tạo EPUB: ' + error.message;
+                buttonText.textContent = 'Tạo EPUB';
+                createEpubBtn.disabled = false;
+                clearBtn.disabled = false;
+                progressContainer.style.display = 'none';
+            }
+        });
+
+        // Lấy tên file không có phần mở rộng
+        function getFileNameWithoutExtension(fileName) {
+            return fileName.replace(/\.[^/.]+$/, "");
+        }
+
+        // Tạo file EPUB
+        async function createEpub() {
+            // Tạo đối tượng JSZip
+            const zip = new JSZip();
+            
+            // Thêm mimetype (phải là file đầu tiên và không nén)
+            zip.file("mimetype", "application/epub+zip", { compression: "STORE" });
+            
+            // Tạo thư mục META-INF
+            const metaInf = zip.folder("META-INF");
+            metaInf.file("container.xml", `<?xml version="1.0" encoding="UTF-8"?>
+<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+  <rootfiles>
+    <rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>
+  </rootfiles>
+</container>`);
+            
+            // Tạo thư mục OEBPS
+            const oebps = zip.folder("OEBPS");
+            
+            // Tạo content.opf
+            let manifestItems = '';
+            let spineItems = '';
+            let tocItems = '';
+            
+            // Tạo UUID cho EPUB
+            const uuid = generateUUID();
+            const bookTitle = getFileNameWithoutExtension(htmlFiles[0].name);
+            
+            // Xử lý từng file HTML theo thứ tự
+            for (let i = 0; i < htmlFiles.length; i++) {
+                const file = htmlFiles[i];
+                const fileName = `chapter${i + 1}.xhtml`;
+                const itemId = `item${i + 1}`;
+                
+                // Cập nhật thanh tiến trình
+                progressBar.style.width = `${((i + 1) / htmlFiles.length) * 100}%`;
+                status.textContent = `Đang xử lý file ${i + 1}/${htmlFiles.length}: ${file.name}`;
+                
+                // Đọc nội dung file
+                const content = await readFile(file);
+                
+                // Tạo file XHTML
+                const xhtmlContent = createXHTML(file.name, content);
+                oebps.file(fileName, xhtmlContent);
+                
+                // Thêm vào manifest
+                manifestItems += `<item id="${itemId}" href="${fileName}" media-type="application/xhtml+xml"/>\n`;
+                
+                // Thêm vào spine
+                spineItems += `<itemref idref="${itemId}"/>\n`;
+                
+                // Thêm vào toc
+                tocItems += `<navPoint id="nav${i + 1}" playOrder="${i + 1}">
+  <navLabel><text>${file.name}</text></navLabel>
+  <content src="${fileName}"/>
+</navPoint>\n`;
+            }
+            
+            // Tạo content.opf
+            const contentOpf = `<?xml version="1.0" encoding="UTF-8"?>
+<package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="BookId">
+  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <dc:identifier id="BookId">urn:uuid:${uuid}</dc:identifier>
+    <dc:title>${bookTitle}</dc:title>
+    <dc:language>vi</dc:language>
+  </metadata>
+  <manifest>
+    <item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>
+    ${manifestItems}
+  </manifest>
+  <spine toc="ncx">
+    ${spineItems}
+  </spine>
+</package>`;
+            
+            oebps.file("content.opf", contentOpf);
+            
+            // Tạo toc.ncx
+            const tocNcx = `<?xml version="1.0" encoding="UTF-8"?>
+<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">
+  <head>
+    <meta name="dtb:uid" content="urn:uuid:${uuid}"/>
+    <meta name="dtb:depth" content="1"/>
+    <meta name="dtb:totalPageCount" content="0"/>
+    <meta name="dtb:maxPageNumber" content="0"/>
+  </head>
+  <docTitle>
+    <text>${bookTitle}</text>
+  </docTitle>
+  <navMap>
+    ${tocItems}
+  </navMap>
+</ncx>`;
+            
+            oebps.file("toc.ncx", tocNcx);
+            
+            // Tạo file ZIP
+            return await zip.generateAsync({ type: "blob" }, metadata => {
+                progressBar.style.width = `${metadata.percent}%`;
+            });
+        }
+
+        // Đọc file dưới dạng text
+        function readFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = (e) => reject(e);
+                reader.readAsText(file);
+            });
+        }
+
+        // Tạo nội dung XHTML từ HTML
+        function createXHTML(title, htmlContent) {
+            // Loại bỏ các thẻ HTML không cần thiết
+            const cleanContent = htmlContent
+                .replace(/<!DOCTYPE[^>]*>/i, '')
+                .replace(/<html[^>]*>/i, '')
+                .replace(/<\/html>/i, '')
+                .replace(/<head[^>]*>[\s\S]*?<\/head>/i, '')
+                .replace(/<body[^>]*>/i, '')
+                .replace(/<\/body>/i, '');
+            
+            return `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <title>${title}</title>
+</head>
+<body>
+${cleanContent}
+</body>
+</html>`;
+        }
+
+        // Tạo UUID
+        function generateUUID() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                const r = Math.random() * 16 | 0,
+                    v = c === 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+
+        // Tải file xuống
+        function downloadFile(blob, fileName) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => {
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }, 100);
+        }
+
+        // Tải JSZip nếu chưa có
+        function loadJSZip() {
+            return new Promise((resolve, reject) => {
+                if (typeof JSZip !== 'undefined') {
+                    resolve();
+                    return;
+                }
+                
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        }
+
+        // Khởi tạo ứng dụng
+        (async function init() {
+            status.textContent = 'Đang tải thư viện JSZip...';
+            try {
+                await loadJSZip();
+                status.textContent = 'Sẵn sàng. Vui lòng chọn file HTML.';
+            } catch (error) {
+                status.textContent = 'Không thể tải thư viện JSZip. Vui lòng kiểm tra kết nối mạng.';
+            }
+        })();
+    </script>
+</body>
+</html>
