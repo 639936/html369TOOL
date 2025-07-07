@@ -4,11 +4,11 @@ const CACHE_NAME = 'html369tool-cache-v1';
 // Liệt kê tất cả các file bạn muốn lưu vào cache
 // Đây là những file cần thiết để ứng dụng của bạn có thể chạy offline
 const urlsToCache = [
-  '/html369TOOL/',
-  '/html369TOOL/index.html',
-  '/html369TOOL/GeminiTransSubs.html',
-  '/html369TOOL/CreatEpubFromHTML.html',
-  '/html369TOOL/Find&ReplaceTXT.html',
+  //'/html369TOOL/',
+  //'/html369TOOL/index.html',
+  //'/html369TOOL/GeminiTransSubs.html',
+  //'/html369TOOL/CreatEpubFromHTML.html',
+  //'/html369TOOL/Find&ReplaceTXT.html',
   // Bạn không cần cache link của Gemini vì nó là link bên ngoài
   // Nếu bạn có các file CSS, JS hoặc hình ảnh riêng, hãy thêm chúng vào đây.
   // Ví dụ: '/html369TOOL/style.css'
