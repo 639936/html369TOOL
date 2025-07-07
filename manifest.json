@@ -1,0 +1,24 @@
+{
+  "name": "Công cụ HTML369",
+  "short_name": "Tool369",
+  "description": "Các công cụ tiện ích từ repo html369TOOL.",
+  "start_url": "/html369TOOL/",
+  "scope": "/html369TOOL/",
+  "display": "standalone",
+  "background_color": "#f2f4f8",
+  "theme_color": "#2e86de",
+  "icons": [
+    {
+      "src": "icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

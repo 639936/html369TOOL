@@ -3,6 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- ... các thẻ meta và title đã có ... -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#2e86de">
+  <!-- ... thẻ style ... -->
   <title>Xin chào</title>
   <style>
     body {
@@ -81,6 +85,20 @@
     <h2>Mô hình Gemini AI</h2>
     <a href="https://ai.google.dev/gemini-api/docs/models?hl=vi#token-size">Xem trang</a>
   </div>
-  </div>
+  <!-- ... phần div cuối cùng của bạn ... -->
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/html369TOOL/sw.js')
+          .then(registration => {
+            console.log('ServiceWorker registered: ', registration);
+          })
+          .catch(registrationError => {
+            console.log('ServiceWorker registration failed: ', registrationError);
+          });
+      });
+    }
+  </script>
 </body>
 </html>
