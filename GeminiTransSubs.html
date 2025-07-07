@@ -32,6 +32,15 @@
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
             padding: 25px;
         }
+    .card {
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      margin: 20px auto;
+      padding: 20px;
+      max-width: 500px;
+      width: 90%;
+    }
         h1 {
             color: var(--primary-color);
             text-align: center;
@@ -176,7 +185,10 @@
         </div>
         <div class="form-group">
             <label for="prompt">Prompt tùy chỉnh</label>
-            <textarea id="prompt">Dịch các dòng phụ đề sau từ Tiếng Việt sang Tiếng Anh. Đảm bảo bản dịch tự nhiên, chính xác chủ vị, phù hợp ngữ cảnh đối thoại của các nhân vật. QUAN TRỌNG: Phải trả về số lượng dòng chính xác bằng với số dòng đầu vào. Mỗi dòng đầu ra phải tương ứng trực tiếp với một dòng đầu vào. Không gộp hoặc bỏ sót dòng. Nếu số dòng đầu vào sau khi dịch bị giảm đi thì tách câu đã dịch hợp lý để trả về số dòng không thay đổi. Chỉ trả về nội dung đã dịch, không trả về bất cứ nội dung nào khác, mỗi câu dịch trên một dòng riêng biệt.</textarea>
+            <textarea id="prompt" readonly>Dịch các dòng phụ đề sau:
+                1. Nếu phụ đề là Tiếng Việt, dịch sang Tiếng Anh
+                2. Nếu phụ đề là Tiếng Anh, dịch sang Tiếng Việt
+                3. Đảm bảo bản dịch tự nhiên, chính xác chủ vị, phù hợp ngữ cảnh đối thoại của các nhân vật. QUAN TRỌNG: Phải trả về số lượng dòng chính xác bằng với số dòng đầu vào. Mỗi dòng đầu ra phải tương ứng trực tiếp với một dòng đầu vào. Không gộp hoặc bỏ sót dòng. Nếu số dòng đầu vào sau khi dịch bị giảm đi thì tách câu đã dịch hợp lý để trả về số dòng không thay đổi. Chỉ trả về nội dung đã dịch, không trả về bất cứ nội dung nào khác, mỗi câu dịch trên một dòng riêng biệt.</textarea>
         </div>
     </div>
 
@@ -252,12 +264,15 @@
         <div id="srt-preview-container" style="display: none;">
             <h2>Xem trước phụ đề song ngữ</h2>
             <div class="srt-preview-grid">
-                <div class="srt-preview-col" id="srt-preview-en"><h3>Phụ đề Tiếng Anh (Đã dịch)</h3></div>
-                <div class="srt-preview-col" id="srt-preview-vi"><h3>Phụ đề Tiếng Việt (Gốc)</h3></div>
+                <div class="srt-preview-col" id="srt-preview-vi"><h3>Phụ đề (Gốc)</h3></div>
+                <div class="srt-preview-col" id="srt-preview-en"><h3>Phụ đề (Đã dịch)</h3></div>
             </div>
             <button id="generate-srt-button" class="action-button">Tạo & Tải file .SRT song ngữ</button>
         </div>
     </div>
+<div class="card">
+    <a href="index.html">Quay lại</a>
+  </div>
 </div>
 
 <script>
@@ -379,8 +394,8 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('text-results').innerHTML = '';
         document.getElementById('txt-results').innerHTML = '';
         document.getElementById('srt-preview-container').style.display = 'none';
-        document.getElementById('srt-preview-en').innerHTML = '<h3>Phụ đề Tiếng Anh (Đã dịch)</h3>';
-        document.getElementById('srt-preview-vi').innerHTML = '<h3>Phụ đề Tiếng Việt (Gốc)</h3>';
+        document.getElementById('srt-preview-vi').innerHTML = '<h3>Phụ đề (Gốc)</h3>';
+        document.getElementById('srt-preview-en').innerHTML = '<h3>Phụ đề (Đã dịch)</h3>';
         clearStatus();
     }
 
@@ -541,8 +556,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function displaySrtPreview(data) {
         const previewEn = document.getElementById('srt-preview-en');
         const previewVi = document.getElementById('srt-preview-vi');
-        previewEn.innerHTML = '<h3>Phụ đề Tiếng Anh (Đã dịch)</h3>';
-        previewVi.innerHTML = '<h3>Phụ đề Tiếng Việt (Gốc)</h3>';
+        previewEn.innerHTML = '<h3>Phụ đề (Đã dịch)</h3>';
+        previewVi.innerHTML = '<h3>Phụ đề (Gốc)</h3>';
         data.forEach(sub => {
             // English Column
             const enLine = document.createElement('div');
@@ -593,6 +608,42 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 </script>
+<!-- Đặt đoạn mã này ngay trước thẻ </body> trong file GeminiTransSubs.html -->
+<script>
+  // Lấy phần tử input từ trang HTML bằng id của nó
+  const apiKeyInput = document.getElementById('api-key');
+  
+  // Đây là "tên" (key) mà chúng ta sẽ dùng để lưu trữ trong localStorage.
+  // Dùng tên cụ thể để tránh xung đột với các trang khác.
+  const STORAGE_KEY = 'geminiPage_apiKey';
 
+  // --- HÀM TẢI DỮ LIỆU KHI MỞ TRANG ---
+  function loadApiKey() {
+    // CẢNH BÁO: API Key được lưu dưới dạng văn bản thuần túy trong localStorage.
+    const savedKey = localStorage.getItem(STORAGE_KEY);
+
+    // Nếu tìm thấy key đã lưu, điền nó vào ô input
+    if (savedKey) {
+      apiKeyInput.value = savedKey;
+      console.log('API Key đã được tải từ localStorage.');
+    }
+  }
+
+  // --- HÀM LƯU DỮ LIỆU KHI NGƯỜI DÙNG NHẬP ---
+  function saveApiKey() {
+    // CẢNH BÁO: API Key đang được lưu dưới dạng văn bản thuần túy trong localStorage.
+    localStorage.setItem(STORAGE_KEY, apiKeyInput.value);
+  }
+
+  // --- GẮN CÁC SỰ KIỆN ---
+
+  // 1. Khi trang vừa tải xong, chạy hàm loadApiKey để điền dữ liệu cũ (nếu có)
+  document.addEventListener('DOMContentLoaded', loadApiKey);
+
+  // 2. Mỗi khi người dùng thay đổi nội dung trong ô input, chạy hàm saveApiKey
+  // Dùng sự kiện 'input' sẽ lưu ngay lập tức khi gõ hoặc dán.
+  apiKeyInput.addEventListener('input', saveApiKey);
+
+</script>
 </body>
 </html>
