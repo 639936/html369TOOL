@@ -593,6 +593,42 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 </script>
+<!-- Đặt đoạn mã này ngay trước thẻ </body> trong file GeminiTransSubs.html -->
+<script>
+  // Lấy phần tử input từ trang HTML bằng id của nó
+  const apiKeyInput = document.getElementById('api-key');
+  
+  // Đây là "tên" (key) mà chúng ta sẽ dùng để lưu trữ trong localStorage.
+  // Dùng tên cụ thể để tránh xung đột với các trang khác.
+  const STORAGE_KEY = 'geminiPage_apiKey';
 
+  // --- HÀM TẢI DỮ LIỆU KHI MỞ TRANG ---
+  function loadApiKey() {
+    // CẢNH BÁO: API Key được lưu dưới dạng văn bản thuần túy trong localStorage.
+    const savedKey = localStorage.getItem(STORAGE_KEY);
+
+    // Nếu tìm thấy key đã lưu, điền nó vào ô input
+    if (savedKey) {
+      apiKeyInput.value = savedKey;
+      console.log('API Key đã được tải từ localStorage.');
+    }
+  }
+
+  // --- HÀM LƯU DỮ LIỆU KHI NGƯỜI DÙNG NHẬP ---
+  function saveApiKey() {
+    // CẢNH BÁO: API Key đang được lưu dưới dạng văn bản thuần túy trong localStorage.
+    localStorage.setItem(STORAGE_KEY, apiKeyInput.value);
+  }
+
+  // --- GẮN CÁC SỰ KIỆN ---
+
+  // 1. Khi trang vừa tải xong, chạy hàm loadApiKey để điền dữ liệu cũ (nếu có)
+  document.addEventListener('DOMContentLoaded', loadApiKey);
+
+  // 2. Mỗi khi người dùng thay đổi nội dung trong ô input, chạy hàm saveApiKey
+  // Dùng sự kiện 'input' sẽ lưu ngay lập tức khi gõ hoặc dán.
+  apiKeyInput.addEventListener('input', saveApiKey);
+
+</script>
 </body>
 </html>
