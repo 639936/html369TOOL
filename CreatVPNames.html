@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini Novel Analyzer</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --primary-color: #2a2a2e;
+            --secondary-color: #3a3a40;
+            --text-color: #e0e0e0;
+            --accent-color: #4a90e2;
+            --success-color: #7ed321;
+            --error-color: #d0021b;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: var(--font-family);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        header, main {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1, h2 {
+            color: var(--accent-color);
+            border-bottom: 2px solid var(--secondary-color);
+            padding-bottom: 10px;
+        }
+        
+        .grid-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .settings-panel, .file-panel {
+            background-color: var(--primary-color);
+            padding: 20px;
+            border-radius: 8px;
+        }
+        
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        details {
+            background-color: var(--secondary-color);
+            border-radius: 4px;
+            margin-bottom: 15px;
+            padding: 10px;
+        }
+
+        summary {
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        textarea {
+            width: 100%;
+            box-sizing: border-box;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            border: 1px solid var(--secondary-color);
+            border-radius: 4px;
+            padding: 10px;
+            min-height: 100px;
+            font-size: 14px;
+            resize: vertical;
+        }
+
+        button {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: #357abd;
+        }
+        
+        button.secondary {
+            background-color: var(--secondary-color);
+        }
+        button.secondary:hover {
+            background-color: #555;
+        }
+
+        button.danger {
+            background-color: var(--error-color);
+        }
+        button.danger:hover {
+            background-color: #a00;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        
+        #drop-zone {
+            border: 2px dashed var(--secondary-color);
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+        #drop-zone.dragover {
+            background-color: var(--secondary-color);
+            border-color: var(--accent-color);
+        }
+        #fileInput {
+            display: none;
+        }
+
+        #fileList {
+            list-style-type: none;
+            padding: 0;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        #fileList li {
+            background-color: var(--secondary-color);
+            padding: 8px 12px;
+            margin-bottom: 5px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        #fileList li::before {
+            font-weight: bold;
+        }
+        .status-pending::before { content: '⏳'; }
+        .status-processing::before { content: '⚙️'; animation: spin 1s linear infinite; }
+        .status-success::before { content: '✅'; color: var(--success-color); }
+        .status-failed::before { content: '❌'; color: var(--error-color); }
+
+        .output-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .output-area {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .output-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        #progress-counter {
+            font-weight: bold;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Gemini Novel Analyzer</h1>
+    </header>
+    <main>
+        <div class="grid-container">
+            <div class="settings-panel">
+                <h2>Cài đặt</h2>
+                <details open>
+                    <summary>API Keys</summary>
+                    <textarea id="apiKeysInput" placeholder="Dán mỗi API Key trên một dòng..."></textarea>
+                </details>
+                <details open>
+                    <summary>Prompt</summary>
+                    <textarea id="promptInput"></textarea>
+                </details>
+            </div>
+            <div class="file-panel">
+                <h2>File cần xử lý <span id="progress-counter"></span></h2>
+                <div id="drop-zone">
+                    Kéo và thả file (.txt, .html) vào đây, hoặc nhấn để chọn file
+                    <input type="file" id="fileInput" multiple accept=".txt,.html,text/plain,text/html">
+                </div>
+                 <ul id="fileList"></ul>
+            </div>
+        </div>
+
+        <div class="full-width button-group">
+            <button id="startBtn">Bắt đầu xử lý</button>
+            <button id="resumeBtn" class="secondary">Tiếp tục xử lý file lỗi</button>
+            <button id="saveStateBtn">Lưu phiên làm việc</button>
+            <button id="clearStateBtn" class="danger">Xóa và làm mới</button>
+        </div>
+
+        <div class="full-width output-grid">
+            <div class="output-area">
+                <div class="output-header">
+                    <h3>Tên Riêng (Name)</h3>
+                    <div class="button-group">
+                        <button class="secondary" onclick="copyToClipboard('outputName')">Copy</button>
+                        <button class="secondary" onclick="downloadAsFile('outputName', 'name.txt')">Tải về</button>
+                    </div>
+                </div>
+                <textarea id="outputName" placeholder="Kết quả tên riêng sẽ hiện ở đây..."></textarea>
+            </div>
+            <div class="output-area">
+                <div class="output-header">
+                    <h3>Việt Phrase (VP)</h3>
+                     <div class="button-group">
+                        <button class="secondary" onclick="copyToClipboard('outputVp')">Copy</button>
+                        <button class="secondary" onclick="downloadAsFile('outputVp', 'vp.txt')">Tải về</button>
+                    </div>
+                </div>
+                <textarea id="outputVp" placeholder="Kết quả Việt Phrase sẽ hiện ở đây..."></textarea>
+            </div>
+            <div class="output-area">
+                 <div class="output-header">
+                    <h3>Luật Nhân (Rule)</h3>
+                    <div class="button-group">
+                        <button class="secondary" onclick="copyToClipboard('outputRule')">Copy</button>
+                        <button class="secondary" onclick="downloadAsFile('outputRule', 'rule.txt')">Tải về</button>
+                    </div>
+                </div>
+                <textarea id="outputRule" placeholder="Kết quả luật nhân sẽ hiện ở đây..."></textarea>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // --- DOM Elements ---
+        const apiKeysInput = document.getElementById('apiKeysInput');
+        const promptInput = document.getElementById('promptInput');
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('fileInput');
+        const fileListElem = document.getElementById('fileList');
+        const startBtn = document.getElementById('startBtn');
+        const resumeBtn = document.getElementById('resumeBtn');
+        const saveStateBtn = document.getElementById('saveStateBtn');
+        const clearStateBtn = document.getElementById('clearStateBtn');
+        const progressCounter = document.getElementById('progress-counter');
+        const outputName = document.getElementById('outputName');
+        const outputVp = document.getElementById('outputVp');
+        const outputRule = document.getElementById('outputRule');
+
+        // --- State Variables ---
+        let filesToProcess = [];
+        let isProcessing = false;
+        
+        const DEFAULT_PROMPT = `Mục tiêu: Phân tích văn bản tiếng Trung, trích xuất và dịch các thành phần cụ thể theo yêu cầu.\n\nYêu cầu chi tiết:\n\n1.  **Nhiệm vụ Phân tích**: Từ văn bản đầu vào, thực hiện ba nhiệm vụ sau:\n    *   **Nhiệm vụ 1: Dịch Tên**: Tìm tất cả tên riêng (tên người, địa danh, môn phái, công pháp, chiêu thức), tên chung và dịch chúng sang Hán Việt.\n    *   **Nhiệm vụ 2: Dịch Cụm Từ (Viet Phrase)**: Tìm các cụm từ hoặc cấu trúc câu phổ biến và dịch sang tiếng Việt tự nhiên, dễ hiểu, giữ văn phong cổ trang.\n    *   **Nhiệm vụ 3: Tạo Luật Nhân**: Tìm các cấu trúc có chứa số hoặc danh từ có thể thay thế để tạo ra quy tắc chung, sử dụng placeholder {0}, {1}.\n\n2.  **Định dạng đầu ra BẮT BUỘC**:\n    *   Kết quả phải là văn bản thuần túy, KHÔNG được chứa markdown hay bất kỳ lời giải thích nào.\n    *   Nội dung phải được chia thành BA phần, kết quả dịch không sử dụng ký tự in hoa, bắt đầu bằng các tiêu đề: "- tên:", "- việt phrase:", "- luật nhân:".\n    *   Mỗi mục trong các phần phải theo định dạng \`Tiếng Trung=Tiếng Việt\`.\n\n**QUY TẮC TUYỆT ĐỐI**: Chỉ được trả về kết quả theo đúng định dạng đã yêu cầu, không có markdown.`;
+
+        // --- Event Listeners ---
+        document.addEventListener('DOMContentLoaded', loadState);
+        
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        });
+        fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+
+        startBtn.addEventListener('click', () => startProcessing(false));
+        resumeBtn.addEventListener('click', () => startProcessing(true));
+        saveStateBtn.addEventListener('click', () => {
+            saveState();
+            alert('Đã lưu phiên làm việc!');
+        });
+        clearStateBtn.addEventListener('click', () => {
+            if (confirm('Bạn có chắc muốn xóa toàn bộ dữ liệu và làm mới không?')) {
+                clearState();
+            }
+        });
+
+
+        // --- State Management ---
+        function saveState() {
+            const state = {
+                apiKeys: apiKeysInput.value,
+                prompt: promptInput.value,
+                files: filesToProcess.map(f => ({ name: f.name, status: f.status })),
+                outputName: outputName.value,
+                outputVp: outputVp.value,
+                outputRule: outputRule.value,
+            };
+            localStorage.setItem('geminiAnalyzerState', JSON.stringify(state));
+        }
+
+        function loadState() {
+            const stateJSON = localStorage.getItem('geminiAnalyzerState');
+            if (stateJSON) {
+                const state = JSON.parse(stateJSON);
+                apiKeysInput.value = state.apiKeys || '';
+                promptInput.value = state.prompt || DEFAULT_PROMPT;
+                // We only restore the metadata, not the file objects themselves
+                filesToProcess = state.files.map(f => ({ name: f.name, status: f.status, file: null }));
+                outputName.value = state.outputName || '';
+                outputVp.value = state.outputVp || '';
+                outputRule.value = state.outputRule || '';
+                updateFileListUI();
+                updateProgressCounter();
+            } else {
+                promptInput.value = DEFAULT_PROMPT;
+            }
+        }
+
+        function clearState() {
+            localStorage.removeItem('geminiAnalyzerState');
+            filesToProcess = [];
+            isProcessing = false;
+            apiKeysInput.value = '';
+            promptInput.value = DEFAULT_PROMPT;
+            outputName.value = '';
+            outputVp.value = '';
+            outputRule.value = '';
+            fileInput.value = '';
+            updateFileListUI();
+            updateProgressCounter();
+        }
+
+        // --- File Handling ---
+        function handleFiles(newFiles) {
+            for (const file of newFiles) {
+                if (!filesToProcess.some(f => f.name === file.name)) {
+                     filesToProcess.push({ file: file, name: file.name, status: 'pending' });
+                }
+            }
+            updateFileListUI();
+        }
+
+        function updateFileListUI() {
+            fileListElem.innerHTML = '';
+            filesToProcess.forEach(fileData => {
+                const li = document.createElement('li');
+                li.className = `status-${fileData.status}`;
+                li.textContent = fileData.name;
+                fileListElem.appendChild(li);
+            });
+        }
+        
+        function updateProgressCounter() {
+            const successCount = filesToProcess.filter(f => f.status === 'success').length;
+            const totalCount = filesToProcess.length;
+            if (totalCount > 0) {
+                progressCounter.textContent = `(${successCount} / ${totalCount})`;
+            } else {
+                progressCounter.textContent = '';
+            }
+        }
+
+        // --- Core Processing Logic ---
+        async function startProcessing(resumeOnly) {
+            if (isProcessing) {
+                alert('Đang trong quá trình xử lý, vui lòng đợi...');
+                return;
+            }
+            const apiKeys = apiKeysInput.value.trim().split('\n').filter(k => k);
+            if (apiKeys.length === 0) {
+                alert('Vui lòng nhập ít nhất một API Key.');
+                return;
+            }
+
+            let queue = resumeOnly 
+                ? filesToProcess.filter(f => f.status === 'failed')
+                : filesToProcess.slice();
+                
+            if (resumeOnly) { // Reset status for resuming
+                 queue.forEach(f => f.status = 'pending');
+            }
+
+            if (queue.length === 0) {
+                alert(resumeOnly ? 'Không có file lỗi nào để xử lý lại.' : 'Không có file nào để xử lý.');
+                return;
+            }
+            
+            isProcessing = true;
+            startBtn.disabled = true;
+            resumeBtn.disabled = true;
+
+            for (const fileData of queue) {
+                if (!fileData.file) {
+                    alert(`Không tìm thấy dữ liệu file cho "${fileData.name}". Vui lòng thêm lại file này.`);
+                    fileData.status = 'failed';
+                    updateFileListUI();
+                    continue;
+                }
+                
+                fileData.status = 'processing';
+                updateFileListUI();
+
+                try {
+                    const content = await readFileAsText(fileData.file);
+                    const resultText = await callGeminiAPI(content, apiKeys, promptInput.value);
+                    parseAndAppendResult(resultText, fileData.name);
+                    fileData.status = 'success';
+                } catch (error) {
+                    console.error(`Lỗi khi xử lý file ${fileData.name}:`, error);
+                    fileData.status = 'failed';
+                }
+                updateFileListUI();
+                updateProgressCounter();
+            }
+
+            isProcessing = false;
+            startBtn.disabled = false;
+            resumeBtn.disabled = false;
+            saveState(); // Auto-save after a batch process
+            alert('Đã xử lý xong!');
+        }
+        
+        function readFileAsText(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = () => reject(reader.error);
+                reader.readAsText(file);
+            });
+        }
+        
+        async function callGeminiAPI(content, apiKeys, prompt, keyIndex = 0) {
+            if (keyIndex >= apiKeys.length) {
+                throw new Error("Tất cả API Key đều đã thất bại hoặc hết hạn mức.");
+            }
+            
+            const apiKey = apiKeys[keyIndex];
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+            const full_prompt = `${prompt}\n\n---\n\n${content}`;
+            
+            const body = {
+                "contents": [{ "parts": [{ "text": full_prompt }] }],
+                "generationConfig": {
+                    "temperature": 0.4, "topK": 1, "topP": 1, "maxOutputTokens": 65536,
+                },
+                "safetySettings": [
+                    { "category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE" },
+                    { "category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE" },
+                    { "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE" },
+                    { "category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE" }
+                ]
+            };
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.candidates && result.candidates[0] && result.candidates[0].content) {
+                        return result.candidates[0].content.parts[0].text;
+                    } else {
+                        console.warn(`API Key ${keyIndex + 1} không trả về nội dung hợp lệ. Thử key tiếp theo.`);
+                        return await callGeminiAPI(content, apiKeys, prompt, keyIndex + 1);
+                    }
+                } else {
+                     console.warn(`API Key ${keyIndex + 1} thất bại (HTTP ${response.status}). Thử key tiếp theo.`);
+                     return await callGeminiAPI(content, apiKeys, prompt, keyIndex + 1);
+                }
+            } catch (error) {
+                console.warn(`Ngoại lệ với API Key ${keyIndex + 1}: ${error}. Thử key tiếp theo.`);
+                return await callGeminiAPI(content, apiKeys, prompt, keyIndex + 1);
+            }
+        }
+
+        function parseAndAppendResult(geminiText, sourceFileName) {
+            const separator = `\n\n--- Kết quả từ file: ${sourceFileName} ---\n\n`;
+            
+            const nameMarker = "- tên:";
+            const vpMarker = "- việt phrase:";
+            const ruleMarker = "- luật nhân:";
+
+            const nameIndex = geminiText.indexOf(nameMarker);
+            const vpIndex = geminiText.indexOf(vpMarker);
+            const ruleIndex = geminiText.indexOf(ruleMarker);
+
+            let nameContent = '';
+            let vpContent = '';
+            let ruleContent = '';
+
+            if (nameIndex !== -1 && vpIndex !== -1) {
+                nameContent = geminiText.substring(nameIndex + nameMarker.length, vpIndex).trim();
+            }
+            if (vpIndex !== -1 && ruleIndex !== -1) {
+                vpContent = geminiText.substring(vpIndex + vpMarker.length, ruleIndex).trim();
+            }
+            if (ruleIndex !== -1) {
+                ruleContent = geminiText.substring(ruleIndex + ruleMarker.length).trim();
+            }
+            
+            if (!nameContent && !vpContent && !ruleContent) { // Fallback if markers are not found
+                 nameContent = geminiText;
+            }
+
+            outputName.value += separator + nameContent;
+            outputVp.value += separator + vpContent;
+            outputRule.value += separator + ruleContent;
+        }
+
+        // --- Utility Functions ---
+        function copyToClipboard(elementId) {
+            const textarea = document.getElementById(elementId);
+            textarea.select();
+            document.execCommand('copy');
+            alert('Đã copy nội dung!');
+        }
+
+        function downloadAsFile(elementId, filename) {
+            const textarea = document.getElementById(elementId);
+            const blob = new Blob([textarea.value], { type: 'text/plain;charset=utf-8' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+            URL.revokeObjectURL(link.href);
+        }
+
+    </script>
+</body>
+</html>
