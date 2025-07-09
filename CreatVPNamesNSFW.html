@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gemini Novel Analyzer & Standardizer</title>
+    <title>Gemini Chunk Processor</title>
     <style>
         :root {
             --bg-color: #1a1a1a;
@@ -24,7 +24,7 @@
             padding: 20px;
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 50px;
         }
 
         header, main {
@@ -42,7 +42,7 @@
         .grid-container {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 50px;
+            gap: 20px;
         }
 
         .settings-panel, .file-panel {
@@ -90,32 +90,17 @@
             font-weight: bold;
             transition: background-color 0.2s;
         }
+        button:hover { background-color: #357abd; }
+        button.secondary { background-color: var(--secondary-color); }
+        button.secondary:hover { background-color: #555; }
+        button.danger { background-color: var(--error-color); }
+        button.danger:hover { background-color: #a00; }
 
-        button:hover {
-            background-color: #357abd;
-        }
-        
-        button.secondary {
-            background-color: var(--secondary-color);
-        }
-        button.secondary:hover {
-            background-color: #555;
-        }
+        .button-group { display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
+        .input-group { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+        .input-group label { font-weight: bold; }
+        .input-group input { background-color: var(--bg-color); color: var(--text-color); border: 1px solid var(--secondary-color); border-radius: 4px; padding: 8px; }
 
-        button.danger {
-            background-color: var(--error-color);
-        }
-        button.danger:hover {
-            background-color: #a00;
-        }
-
-        .button-group {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-            flex-wrap: wrap;
-        }
-        
         .drop-zone {
             border: 2px dashed var(--secondary-color);
             border-radius: 8px;
@@ -125,85 +110,52 @@
             transition: background-color 0.2s, border-color 0.2s;
             margin-top: 15px;
         }
-        .drop-zone.dragover {
-            background-color: var(--secondary-color);
-            border-color: var(--accent-color);
-        }
-        .file-input-hidden {
-            display: none;
-        }
+        .drop-zone.dragover { background-color: var(--secondary-color); border-color: var(--accent-color); }
+        .file-input-hidden { display: none; }
 
-        .file-list {
+        .chunk-list {
             list-style-type: none;
             padding: 0;
-            max-height: 50px;
+            max-height: 400px;
             overflow-y: auto;
             margin-top: 10px;
         }
-        .file-list li {
+        .chunk-list li {
             background-color: var(--secondary-color);
             padding: 8px 12px;
             margin-bottom: 5px;
             border-radius: 4px;
             display: flex;
             align-items: center;
-            gap: 50px;
+            gap: 10px;
+            font-family: monospace;
         }
-        .file-list li::before {
-            font-weight: bold;
-        }
+        .chunk-list li::before { font-weight: bold; }
         .status-pending::before { content: '⏳'; }
         .status-processing::before { content: '⚙️'; animation: spin 1s linear infinite; }
-        .status-success::before { content: '✅'; color: var(--success-color); }
-        .status-failed::before { content: '❌'; color: var(--error-color); }
+        .status-success::before { content: '✅'; }
+        .status-failed::before { content: '❌'; }
 
-        .output-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 50px;
-        }
+        .output-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        .output-area { display: flex; flex-direction: column; gap: 10px; }
+        .output-header { display: flex; justify-content: space-between; align-items: center; }
+        #progress-counter { font-weight: bold; }
 
-        .output-area {
-            display: flex;
-            flex-direction: column;
-            gap: 50px;
-        }
-        
-        .output-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        #progress-counter {
-            font-weight: bold;
-        }
-        
-        hr {
-            border: none;
-            border-top: 2px solid var(--secondary-color);
-            margin: 40px 0;
-        }
-
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
     <header>
-        <h1>Gemini Novel Analyzer & Standardizer</h1>
+        <h1>Gemini Chunk Processor</h1>
     </header>
     <main>
         <div>
     <a href="index.html">Quay về</a>
   </div>
-        <!-- GEMINI PROCESSING SECTION -->
         <section>
             <div class="grid-container">
                 <div class="settings-panel">
-                    <h2>Cài đặt Gemini</h2>
+                    <h2>Cài đặt</h2>
                     <details open>
                         <summary>API Keys</summary>
                         <textarea id="apiKeysInput" placeholder="Dán mỗi API Key trên một dòng..."></textarea>
@@ -214,18 +166,30 @@
                     </details>
                 </div>
                 <div class="file-panel">
-                    <h2>File cần xử lý <span id="progress-counter"></span></h2>
-                    <div id="drop-zone-gemini" class="drop-zone">
-                        Kéo và thả file (.txt, .html) vào đây, hoặc nhấn để chọn file
-                        <input type="file" id="fileInput-gemini" class="file-input-hidden" multiple accept=".txt,.html,text/plain,text/html">
+                    <h2>Bước 1: Nhập liệu</h2>
+                    <textarea id="mainTextInput" placeholder="Dán toàn bộ văn bản vào đây..."></textarea>
+                    <div id="drop-zone" class="drop-zone">
+                        Hoặc kéo thả/chọn file (.txt, .html)
+                        <input type="file" id="fileInput" class="file-input-hidden" multiple accept=".txt,.html,text/plain,text/html">
                     </div>
-                     <ul id="fileList-gemini" class="file-list"></ul>
                 </div>
             </div>
 
+            <div class="full-width settings-panel">
+                <h2>Bước 2: Tách đoạn & Xem danh sách</h2>
+                <div class="input-group">
+                    <label for="separatorInput">Ký tự tách đoạn:</label>
+                    <input type="text" id="separatorInput" value="\n\n" placeholder="\n\n">
+                    <button id="prepareChunksBtn">Tách thành các đoạn</button>
+                </div>
+                <p>Danh sách các đoạn cần xử lý <span id="progress-counter"></span></p>
+                <ul id="chunkList" class="chunk-list"></ul>
+            </div>
+
             <div class="full-width button-group">
+                <h2>Bước 3: Xử lý</h2>
                 <button id="startBtn">Bắt đầu xử lý</button>
-                <button id="resumeBtn" class="secondary">Tiếp tục xử lý file lỗi</button>
+                <button id="resumeBtn" class="secondary">Tiếp tục xử lý đoạn lỗi</button>
                 <button id="saveStateBtn">Lưu phiên làm việc</button>
                 <button id="clearStateBtn" class="danger">Xóa và làm mới</button>
             </div>
@@ -245,52 +209,18 @@
                 </div>
             </div>
         </section>
-
-        <hr>
-
-        <!-- STANDARDIZER SECTION -->
-        <section>
-            <h2>Công cụ Chuẩn hoá Dữ liệu</h2>
-            <div class="grid-container">
-                <div class="settings-panel full-width">
-                     <details open>
-                        <summary>Dữ liệu cần chuẩn hoá</summary>
-                        <p>Dán nội dung vào ô dưới, hoặc kéo thả/chọn các file .txt (name, vp, rule) để loại bỏ các dòng trùng lặp.</p>
-                        <textarea id="standardizerInput" placeholder="Dán nội dung vào đây..."></textarea>
-                        
-                        <div id="drop-zone-standardizer" class="drop-zone">
-                            Kéo và thả file (.txt) vào đây, hoặc nhấn để chọn file
-                             <input type="file" id="fileInput-standardizer" class="file-input-hidden" multiple accept=".txt,text/plain">
-                        </div>
-                        <ul id="fileList-standardizer" class="file-list"></ul>
-
-                        <div class="button-group">
-                            <button id="standardizeBtn">Chuẩn hoá</button>
-                        </div>
-                    </details>
-                </div>
-
-                <div class="output-area full-width">
-                    <div class="output-header">
-                        <h3>Kết quả đã chuẩn hoá</h3>
-                        <div class="button-group">
-                            <button class="secondary" onclick="copyToClipboard('standardizerOutput')">Copy</button>
-                            <button class="secondary" onclick="downloadAsFile('standardizerOutput', 'standardized.txt')">Tải về</button>
-                        </div>
-                    </div>
-                    <textarea id="standardizerOutput" placeholder="Kết quả sau khi loại bỏ trùng lặp sẽ hiện ở đây..."></textarea>
-                </div>
-            </div>
-        </section>
     </main>
 
     <script>
         // --- DOM Elements ---
         const apiKeysInput = document.getElementById('apiKeysInput');
         const promptInput = document.getElementById('promptInput');
-        const dropZoneGemini = document.getElementById('drop-zone-gemini');
-        const fileInputGemini = document.getElementById('fileInput-gemini');
-        const fileListGemini = document.getElementById('fileList-gemini');
+        const mainTextInput = document.getElementById('mainTextInput');
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('fileInput');
+        const separatorInput = document.getElementById('separatorInput');
+        const prepareChunksBtn = document.getElementById('prepareChunksBtn');
+        const chunkListElem = document.getElementById('chunkList');
         const startBtn = document.getElementById('startBtn');
         const resumeBtn = document.getElementById('resumeBtn');
         const saveStateBtn = document.getElementById('saveStateBtn');
@@ -299,19 +229,9 @@
         const outputName = document.getElementById('outputName');
         const outputVp = document.getElementById('outputVp');
         const outputRule = document.getElementById('outputRule');
-        
-        // Standardizer Elements
-        const standardizerInput = document.getElementById('standardizerInput');
-        const dropZoneStandardizer = document.getElementById('drop-zone-standardizer');
-        const fileInputStandardizer = document.getElementById('fileInput-standardizer');
-        const fileListStandardizer = document.getElementById('fileList-standardizer');
-        const standardizeBtn = document.getElementById('standardizeBtn');
-        const standardizerOutput = document.getElementById('standardizerOutput');
-
 
         // --- State Variables ---
-        let filesToProcess = [];
-        let standardizerFiles = [];
+        let chunksToProcess = [];
         let isProcessing = false;
         
         const DEFAULT_PROMPT = `Mục tiêu: Phân tích văn bản tiếng Trung, trích xuất và dịch các thành phần cụ thể theo yêu cầu.\n\nYêu cầu chi tiết:\n\n1.  **Nhiệm vụ Phân tích**: Từ văn bản đầu vào, thực hiện ba nhiệm vụ sau:\n    *   **Nhiệm vụ 1: Dịch Tên**: Tìm tất cả tên riêng (tên người, địa danh, môn phái, công pháp, chiêu thức), tên chung và dịch chúng sang Hán Việt.\n    *   **Nhiệm vụ 2: Dịch Cụm Từ (Viet Phrase)**: Tìm các cụm từ hoặc cấu trúc câu phổ biến, không quá 6 ký tự và dịch sang tiếng Việt tự nhiên, dễ hiểu, giữ văn phong cổ trang.\n    *   **Nhiệm vụ 3: Tạo Luật Nhân**: Tìm các cấu trúc có chứa số hoặc danh từ có thể thay thế, không quá 6 ký tự để tạo ra quy tắc chung, sử dụng placeholder {0}, {1}.\n\n2.  **Định dạng đầu ra BẮT BUỘC**:\n    *   Kết quả phải là văn bản thuần túy, KHÔNG được chứa markdown hay bất kỳ lời giải thích nào.\n    *   Nội dung phải được chia thành BA phần, kết quả dịch chỉ sử dụng ký tự in hoa hợp lý với tên, không sử dụng ký tự in hoa với vp và luật , bắt đầu bằng các tiêu đề: "- tên:", "- việt phrase:", "- luật nhân:".\n    *   Mỗi mục trong các phần phải theo định dạng \`Tiếng Trung=Tiếng Việt\`.\n\n**QUY TẮC TUYỆT ĐỐI**: Chỉ được trả về kết quả theo đúng định dạng đã yêu cầu, không có markdown.`;
@@ -319,50 +239,45 @@
         // --- Event Listeners ---
         document.addEventListener('DOMContentLoaded', loadState);
         
-        // Gemini listeners
-        dropZoneGemini.addEventListener('click', () => fileInputGemini.click());
-        dropZoneGemini.addEventListener('dragover', (e) => { e.preventDefault(); dropZoneGemini.classList.add('dragover'); });
-        dropZoneGemini.addEventListener('dragleave', () => dropZoneGemini.classList.remove('dragover'));
-        dropZoneGemini.addEventListener('drop', (e) => { e.preventDefault(); dropZoneGemini.classList.remove('dragover'); handleFilesGemini(e.dataTransfer.files); });
-        fileInputGemini.addEventListener('change', (e) => handleFilesGemini(e.target.files));
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); handleFileDrop(e.dataTransfer.files); });
+        fileInput.addEventListener('change', (e) => handleFileDrop(e.target.files));
+        
+        prepareChunksBtn.addEventListener('click', handlePrepareChunks);
         startBtn.addEventListener('click', () => startProcessing(false));
         resumeBtn.addEventListener('click', () => startProcessing(true));
         saveStateBtn.addEventListener('click', () => { saveState(); alert('Đã lưu phiên làm việc!'); });
         clearStateBtn.addEventListener('click', () => { if (confirm('Bạn có chắc muốn xóa toàn bộ dữ liệu và làm mới không?')) { clearState(); } });
         
-        // Standardizer listeners
-        dropZoneStandardizer.addEventListener('click', () => fileInputStandardizer.click());
-        dropZoneStandardizer.addEventListener('dragover', (e) => { e.preventDefault(); dropZoneStandardizer.classList.add('dragover'); });
-        dropZoneStandardizer.addEventListener('dragleave', () => dropZoneStandardizer.classList.remove('dragover'));
-        dropZoneStandardizer.addEventListener('drop', (e) => { e.preventDefault(); dropZoneStandardizer.classList.remove('dragover'); handleFilesStandardizer(e.dataTransfer.files); });
-        fileInputStandardizer.addEventListener('change', (e) => handleFilesStandardizer(e.target.files));
-        standardizeBtn.addEventListener('click', handleStandardizeClick);
-
 
         // --- State Management ---
         function saveState() {
             const state = {
                 apiKeys: apiKeysInput.value,
                 prompt: promptInput.value,
-                files: filesToProcess.map(f => ({ name: f.name, status: f.status })),
+                mainText: mainTextInput.value,
+                chunks: chunksToProcess,
                 outputName: outputName.value,
                 outputVp: outputVp.value,
                 outputRule: outputRule.value,
             };
-            localStorage.setItem('geminiAnalyzerState', JSON.stringify(state));
+            localStorage.setItem('geminiChunkState', JSON.stringify(state));
         }
 
         function loadState() {
-            const stateJSON = localStorage.getItem('geminiAnalyzerState');
+            const stateJSON = localStorage.getItem('geminiChunkState');
             if (stateJSON) {
                 const state = JSON.parse(stateJSON);
                 apiKeysInput.value = state.apiKeys || '';
                 promptInput.value = state.prompt || DEFAULT_PROMPT;
-                filesToProcess = state.files.map(f => ({ name: f.name, status: f.status, file: null }));
+                mainTextInput.value = state.mainText || '';
+                chunksToProcess = state.chunks || [];
                 outputName.value = state.outputName || '';
                 outputVp.value = state.outputVp || '';
                 outputRule.value = state.outputRule || '';
-                updateFileListGeminiUI();
+                updateChunkListUI();
                 updateProgressCounter();
             } else {
                 promptInput.value = DEFAULT_PROMPT;
@@ -370,46 +285,79 @@
         }
 
         function clearState() {
-            localStorage.removeItem('geminiAnalyzerState');
-            filesToProcess = [];
-            standardizerFiles = [];
+            localStorage.removeItem('geminiChunkState');
+            chunksToProcess = [];
             isProcessing = false;
             apiKeysInput.value = '';
             promptInput.value = DEFAULT_PROMPT;
+            mainTextInput.value = '';
             outputName.value = '';
             outputVp.value = '';
             outputRule.value = '';
-            fileInputGemini.value = '';
-            standardizerInput.value = '';
-            standardizerOutput.value = '';
-            updateFileListGeminiUI();
-            updateFileListStandardizerUI();
+            fileInput.value = '';
+            updateChunkListUI();
             updateProgressCounter();
         }
 
-        // --- File Handling ---
-        function handleFilesGemini(newFiles) {
-            for (const file of newFiles) {
-                if (!filesToProcess.some(f => f.name === file.name)) {
-                     filesToProcess.push({ file: file, name: file.name, status: 'pending' });
+        // --- File & Chunk Handling ---
+        async function handleFileDrop(files) {
+            for (const file of files) {
+                try {
+                    const content = await readFileAsText(file);
+                    mainTextInput.value += `\n\n--- Nội dung từ file: ${file.name} ---\n\n${content}`;
+                } catch(e) {
+                    alert(`Không thể đọc file: ${file.name}`);
                 }
             }
-            updateFileListGeminiUI();
+        }
+        
+        function handlePrepareChunks() {
+            const separatorText = separatorInput.value.replace(/\\n/g, '\n');
+            if (!separatorText) {
+                alert('Ký tự tách đoạn không được để trống.');
+                return;
+            }
+            const fullText = mainTextInput.value;
+            if (!fullText.trim()) {
+                alert('Không có văn bản nào để tách.');
+                return;
+            }
+
+            const rawChunks = fullText.split(separatorText);
+            const totalRawChunks = rawChunks.length;
+
+            chunksToProcess = rawChunks
+                .map(content => content.trim())
+                // ==========================================================
+                // === THAY ĐỔI QUAN TRỌNG: Lọc các đoạn < 20 ký tự       ===
+                // ==========================================================
+                .filter(content => content.length >= 20)
+                .map((content, index) => ({
+                    id: `Đoạn ${index + 1}`,
+                    content: content,
+                    status: 'pending'
+                }));
+            
+            const skippedCount = totalRawChunks - chunksToProcess.length;
+
+            updateChunkListUI();
+            updateProgressCounter();
+            alert(`Đã tách thành công ${chunksToProcess.length} đoạn. Bỏ qua ${skippedCount} đoạn có độ dài dưới 20 ký tự.`);
         }
 
-        function updateFileListGeminiUI() {
-            fileListGemini.innerHTML = '';
-            filesToProcess.forEach(fileData => {
+        function updateChunkListUI() {
+            chunkListElem.innerHTML = '';
+            chunksToProcess.forEach(chunkData => {
                 const li = document.createElement('li');
-                li.className = `status-${fileData.status}`;
-                li.textContent = fileData.name;
-                fileListGemini.appendChild(li);
+                li.className = `status-${chunkData.status}`;
+                li.textContent = `${chunkData.id} (${chunkData.content.substring(0, 50)}...)`;
+                chunkListElem.appendChild(li);
             });
         }
         
         function updateProgressCounter() {
-            const successCount = filesToProcess.filter(f => f.status === 'success').length;
-            const totalCount = filesToProcess.length;
+            const successCount = chunksToProcess.filter(c => c.status === 'success').length;
+            const totalCount = chunksToProcess.length;
             if (totalCount > 0) {
                 progressCounter.textContent = `(${successCount} / ${totalCount})`;
             } else {
@@ -432,35 +380,30 @@
             const apiKeys = apiKeysInput.value.trim().split('\n').filter(k => k);
             if (apiKeys.length === 0) { alert('Vui lòng nhập ít nhất một API Key.'); return; }
 
-            let queue = resumeOnly ? filesToProcess.filter(f => f.status === 'failed') : filesToProcess.slice();
-            if (resumeOnly) { queue.forEach(f => f.status = 'pending'); }
-            if (queue.length === 0) { alert(resumeOnly ? 'Không có file lỗi nào để xử lý lại.' : 'Không có file nào để xử lý.'); return; }
+            let queue = resumeOnly 
+                ? chunksToProcess.filter(c => c.status === 'failed') 
+                : chunksToProcess.slice();
+                
+            if (resumeOnly) { queue.forEach(c => c.status = 'pending'); }
+            if (queue.length === 0) { alert(resumeOnly ? 'Không có đoạn lỗi nào để xử lý lại.' : 'Không có đoạn nào để xử lý. Vui lòng tách đoạn trước.'); return; }
             
             isProcessing = true;
             startBtn.disabled = true;
             resumeBtn.disabled = true;
 
-            for (const fileData of queue) {
-                if (!fileData.file) {
-                    alert(`Không tìm thấy dữ liệu file cho "${fileData.name}". Vui lòng thêm lại file này.`);
-                    fileData.status = 'failed';
-                    updateFileListGeminiUI();
-                    continue;
-                }
-                
-                fileData.status = 'processing';
-                updateFileListGeminiUI();
+            for (const chunkData of queue) {
+                chunkData.status = 'processing';
+                updateChunkListUI();
 
                 try {
-                    const content = await readFileAsText(fileData.file);
-                    const resultText = await callGeminiAPI(content, apiKeys, promptInput.value);
-                    parseAndAppendResult(resultText, fileData.name);
-                    fileData.status = 'success';
+                    const resultText = await callGeminiAPI(chunkData.content, apiKeys, promptInput.value);
+                    parseAndAppendResult(resultText, chunkData.id);
+                    chunkData.status = 'success';
                 } catch (error) {
-                    console.error(`Lỗi khi xử lý file ${fileData.name}:`, error);
-                    fileData.status = 'failed';
+                    console.error(`Lỗi khi xử lý ${chunkData.id}:`, error);
+                    chunkData.status = 'failed';
                 }
-                updateFileListGeminiUI();
+                updateChunkListUI();
                 updateProgressCounter();
             }
 
@@ -497,8 +440,8 @@
             }
         }
 
-        function parseAndAppendResult(geminiText, sourceFileName) {
-            const separator = `\n\n--- Kết quả từ file: ${sourceFileName} ---\n\n`;
+        function parseAndAppendResult(geminiText, sourceChunkId) {
+            const separator = `\n\n--- Kết quả từ: ${sourceChunkId} ---\n\n`;
             const nameMarker = "- tên:"; const vpMarker = "- việt phrase:"; const ruleMarker = "- luật nhân:";
             const nameIndex = geminiText.indexOf(nameMarker); const vpIndex = geminiText.indexOf(vpMarker); const ruleIndex = geminiText.indexOf(ruleMarker);
             let nameContent = '', vpContent = '', ruleContent = '';
@@ -512,73 +455,6 @@
             if (vpContent) outputVp.value += (outputVp.value ? separator : '') + vpContent;
             if (ruleContent) outputRule.value += (outputRule.value ? separator : '') + ruleContent;
         }
-
-        // --- Standardizer Logic & UI ---
-        function handleFilesStandardizer(newFiles) {
-            for (const file of newFiles) {
-                if (!standardizerFiles.some(f => f.name === file.name)) {
-                     standardizerFiles.push({ file: file, name: file.name });
-                }
-            }
-            updateFileListStandardizerUI();
-        }
-
-        function updateFileListStandardizerUI() {
-            fileListStandardizer.innerHTML = '';
-            standardizerFiles.forEach(fileData => {
-                const li = document.createElement('li');
-                li.textContent = fileData.name;
-                fileListStandardizer.appendChild(li);
-            });
-        }
-        
-        async function handleStandardizeClick() {
-            let combinedText = standardizerInput.value;
-
-            if (standardizerFiles.length > 0) {
-                for (const fileData of standardizerFiles) {
-                    try {
-                        const fileContent = await readFileAsText(fileData.file);
-                        combinedText += "\n" + fileContent;
-                    } catch (error) {
-                        console.error(`Lỗi đọc file chuẩn hoá ${fileData.name}:`, error);
-                        alert(`Không thể đọc file: ${fileData.name}`);
-                    }
-                }
-            }
-
-            if (!combinedText.trim()) {
-                alert('Không có dữ liệu để chuẩn hoá.');
-                return;
-            }
-
-            const uniqueEntries = new Map();
-            const lines = combinedText.split('\n');
-
-            for (const line of lines) {
-                const trimmedLine = line.trim();
-                if (!trimmedLine || trimmedLine.startsWith('---')) continue;
-
-                const separatorIndex = trimmedLine.indexOf('=');
-                if (separatorIndex === -1) continue;
-
-                const chineseKey = trimmedLine.substring(0, separatorIndex).trim();
-                const vietnameseValue = trimmedLine.substring(separatorIndex + 1).trim();
-
-                if (chineseKey && !uniqueEntries.has(chineseKey)) {
-                    uniqueEntries.set(chineseKey, vietnameseValue);
-                }
-            }
-
-            const resultLines = [];
-            uniqueEntries.forEach((value, key) => {
-                resultLines.push(`${key}=${value}`);
-            });
-
-            standardizerOutput.value = resultLines.join('\n');
-            alert(`Đã chuẩn hoá xong! Tìm thấy ${uniqueEntries.size} mục duy nhất.`);
-        }
-
 
         // --- Utility Functions ---
         function copyToClipboard(elementId) {
