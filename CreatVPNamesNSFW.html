@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gemini Processor & Standardizer</title>
+    <title>Gemini Novel Analyzer & Standardizer</title>
     <style>
         :root {
             --bg-color: #1a1a1a;
@@ -33,15 +33,18 @@
             margin: 0 auto;
         }
 
-        h1, h2, h3, h4 {
+        h1, h2, h3 {
             color: var(--accent-color);
-        }
-
-        h2, h3 {
-             border-bottom: 2px solid var(--secondary-color);
-             padding-bottom: 10px;
+            border-bottom: 2px solid var(--secondary-color);
+            padding-bottom: 10px;
         }
         
+        h3 {
+            border: none;
+            padding-bottom: 0;
+            margin: 0;
+        }
+
         .grid-container {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -84,12 +87,11 @@
             min-height: 150px;
             font-size: 14px;
             resize: vertical;
-            margin-top: 10px;
         }
-
-        #apiKeysInput, #promptInput { min-height: 100px; }
-        #mainTextInput { min-height: 480px; }
-        .output-area textarea { min-height: 300px; }
+        
+        #outputName, #outputVp, #outputRule {
+            min-height: 400px;
+        }
 
         button {
             background-color: var(--accent-color);
@@ -101,17 +103,33 @@
             font-weight: bold;
             transition: background-color 0.2s;
         }
-        button:hover { background-color: #357abd; }
-        button.secondary { background-color: var(--secondary-color); }
-        button.secondary:hover { background-color: #555; }
-        button.danger { background-color: var(--error-color); }
-        button.danger:hover { background-color: #a00; }
 
-        .button-group { display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
-        .input-group { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
-        .input-group label { font-weight: bold; }
-        .input-group input { background-color: var(--bg-color); color: var(--text-color); border: 1px solid var(--secondary-color); border-radius: 4px; padding: 8px; }
+        button:hover {
+            background-color: #357abd;
+        }
+        
+        button.secondary {
+            background-color: var(--secondary-color);
+        }
+        button.secondary:hover {
+            background-color: #555;
+        }
 
+        button.danger {
+            background-color: var(--error-color);
+        }
+        button.danger:hover {
+            background-color: #a00;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
         .drop-zone {
             border: 2px dashed var(--secondary-color);
             border-radius: 8px;
@@ -121,17 +139,22 @@
             transition: background-color 0.2s, border-color 0.2s;
             margin-top: 15px;
         }
-        .drop-zone.dragover { background-color: var(--secondary-color); border-color: var(--accent-color); }
-        .file-input-hidden { display: none; }
+        .drop-zone.dragover {
+            background-color: var(--secondary-color);
+            border-color: var(--accent-color);
+        }
+        .file-input-hidden {
+            display: none;
+        }
 
-        .chunk-list {
+        .file-list {
             list-style-type: none;
             padding: 0;
-            max-height: 400px;
+            max-height: 200px;
             overflow-y: auto;
             margin-top: 10px;
         }
-        .chunk-list li {
+        .file-list li {
             background-color: var(--secondary-color);
             padding: 8px 12px;
             margin-bottom: 5px;
@@ -139,37 +162,62 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            font-family: monospace;
         }
-        .chunk-list li::before { font-weight: bold; }
+        .file-list li::before {
+            font-weight: bold;
+        }
         .status-pending::before { content: '⏳'; }
         .status-processing::before { content: '⚙️'; animation: spin 1s linear infinite; }
-        .status-success::before { content: '✅'; }
-        .status-failed::before { content: '❌'; }
+        .status-success::before { content: '✅'; color: var(--success-color); }
+        .status-failed::before { content: '❌'; color: var(--error-color); }
 
-        .output-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
-        .output-area { display: flex; flex-direction: column; gap: 10px; }
-        .output-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;}
-        #progress-counter { font-weight: bold; }
-        hr { border: none; border-top: 2px solid var(--secondary-color); margin: 40px 0; }
+        .output-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
 
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .output-area {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .output-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        #progress-counter {
+            font-weight: bold;
+        }
+        
+        hr {
+            border: none;
+            border-top: 2px solid var(--secondary-color);
+            margin: 40px 0;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
     <header>
-        <h1>Gemini Processor & Standardizer</h1>
+        <h1>Gemini Novel Analyzer & Standardizer</h1>
     </header>
     <main>
         <div>
             <a href="index.html">Quay về</a>
         </div>
-        <!-- ==================== GEMINI PROCESSING SECTION ==================== -->
+        <!-- GEMINI PROCESSING SECTION -->
         <section>
-            <h2>Công cụ xử lý Gemini</h2>
+            <h2>Công cụ Khai thác Dữ liệu từ Gemini</h2>
             <div class="grid-container">
                 <div class="settings-panel">
-                    <h3>Cài đặt</h3>
                     <details>
                         <summary>API Keys</summary>
                         <textarea id="apiKeysInput" placeholder="Dán mỗi API Key trên một dòng..."></textarea>
@@ -180,120 +228,113 @@
                     </details>
                 </div>
                 <div class="file-panel">
-                    <h3>Bước 1: Nhập liệu</h3>
-                    <textarea id="mainTextInput" placeholder="Dán toàn bộ văn bản vào đây..."></textarea>
-                    <div id="drop-zone" class="drop-zone">
-                        Hoặc kéo thả/chọn file (.txt, .html)
-                        <input type="file" id="fileInput" class="file-input-hidden" multiple accept=".txt,.html,text/plain,text/html">
+                    <h3>File cần xử lý <span id="progress-counter"></span></h3>
+                    <div id="drop-zone-gemini" class="drop-zone">
+                        Kéo và thả file (.txt, .html) vào đây, hoặc nhấn để chọn file
+                        <input type="file" id="fileInput-gemini" class="file-input-hidden" multiple accept=".txt,.html,text/plain,text/html">
                     </div>
+                     <ul id="fileList-gemini" class="file-list"></ul>
                 </div>
-            </div>
-
-            <div class="full-width settings-panel">
-                <h3>Bước 2: Tách đoạn & Xem danh sách</h3>
-                <div class="input-group">
-                    <label for="separatorInput">Ký tự tách đoạn:</label>
-                    <input type="text" id="separatorInput" value="\n\n" placeholder="\n\n">
-                    <button id="prepareChunksBtn">Tách thành các đoạn</button>
-                </div>
-                <p>Danh sách các đoạn cần xử lý <span id="progress-counter"></span></p>
-                <ul id="chunkList" class="chunk-list"></ul>
             </div>
 
             <div class="full-width button-group">
-                <h3>Bước 3: Xử lý</h3>
                 <button id="startBtn">Bắt đầu xử lý</button>
-                <button id="resumeBtn" class="secondary">Tiếp tục xử lý đoạn lỗi</button>
+                <button id="resumeBtn" class="secondary">Tiếp tục xử lý file lỗi</button>
                 <button id="saveStateBtn">Lưu phiên làm việc</button>
                 <button id="clearStateBtn" class="danger">Xóa và làm mới</button>
             </div>
 
             <div class="full-width output-grid">
                 <div class="output-area">
-                    <div class="output-header"><h4>Kết quả: Tên Riêng</h4><div class="button-group"><button class="secondary" onclick="copyToClipboard('outputName')">Copy</button><button class="secondary" onclick="downloadAsFile('outputName', 'name.txt')">Tải về</button></div></div>
-                    <textarea id="outputName" placeholder="..."></textarea>
+                    <div class="output-header"><h3>Tên Riêng (Name)</h3><div class="button-group"><button class="secondary" onclick="copyToClipboard('outputName')">Copy</button><button class="secondary" onclick="downloadAsFile('outputName', 'name.txt')">Tải về</button></div></div>
+                    <textarea id="outputName" placeholder="Kết quả tên riêng sẽ hiện ở đây..."></textarea>
                 </div>
                 <div class="output-area">
-                    <div class="output-header"><h4>Kết quả: Việt Phrase</h4><div class="button-group"><button class="secondary" onclick="copyToClipboard('outputVp')">Copy</button><button class="secondary" onclick="downloadAsFile('outputVp', 'vp.txt')">Tải về</button></div></div>
-                    <textarea id="outputVp" placeholder="..."></textarea>
+                    <div class="output-header"><h3>Việt Phrase (VP)</h3><div class="button-group"><button class="secondary" onclick="copyToClipboard('outputVp')">Copy</button><button class="secondary" onclick="downloadAsFile('outputVp', 'vp.txt')">Tải về</button></div></div>
+                    <textarea id="outputVp" placeholder="Kết quả Việt Phrase sẽ hiện ở đây..."></textarea>
                 </div>
                 <div class="output-area">
-                     <div class="output-header"><h4>Kết quả: Luật Nhân</h4><div class="button-group"><button class="secondary" onclick="copyToClipboard('outputRule')">Copy</button><button class="secondary" onclick="downloadAsFile('outputRule', 'rule.txt')">Tải về</button></div></div>
-                    <textarea id="outputRule" placeholder="..."></textarea>
+                     <div class="output-header"><h3>Luật Nhân (Rule)</h3><div class="button-group"><button class="secondary" onclick="copyToClipboard('outputRule')">Copy</button><button class="secondary" onclick="downloadAsFile('outputRule', 'rule.txt')">Tải về</button></div></div>
+                    <textarea id="outputRule" placeholder="Kết quả luật nhân sẽ hiện ở đây..."></textarea>
                 </div>
             </div>
         </section>
 
         <hr>
 
-        <!-- ==================== STANDARDIZER SECTION ==================== -->
+        <!-- STANDARDIZER SECTION -->
         <section>
             <h2>Công cụ Chuẩn hoá Dữ liệu</h2>
+            
             <details>
-                <summary>1. Chuẩn hóa file vừa được tạo</summary>
-                <p>Chức năng này sẽ lấy dữ liệu từ 3 ô kết quả ở trên, tự động loại bỏ các dòng trùng lặp và hiển thị kết quả đã được làm sạch ở dưới.</p>
+                <summary>1. Chuẩn hóa Hàng loạt (Từ kết quả Gemini)</summary>
+                <p>Công cụ này sẽ lấy dữ liệu từ 3 ô kết quả ở trên, tự động loại bỏ các dòng trùng lặp cho từng loại và hiển thị kết quả đã làm sạch ở dưới.</p>
                 <div class="button-group">
-                     <button id="standardizeGeneratedBtn">Bắt đầu chuẩn hóa</button>
+                    <button id="runGeneratedStandardizerBtn">Bắt đầu chuẩn hoá hàng loạt</button>
                 </div>
-                <div class="output-grid" style="margin-top: 15px;">
+                <div class="full-width output-grid" style="margin-top: 20px;">
                     <div class="output-area">
-                        <div class="output-header"><h4>Name đã chuẩn hóa</h4><div class="button-group"><button class="secondary" onclick="copyToClipboard('reviewName')">Copy</button><button class="secondary" onclick="downloadAsFile('reviewName', 'name_std.txt')">Tải về</button></div></div>
-                        <textarea id="reviewName" placeholder="..."></textarea>
+                        <div class="output-header"><h3>Name đã chuẩn hoá</h3><div class="button-group"><button class="secondary" onclick="copyToClipboard('stdOutputName')">Copy</button><button class="secondary" onclick="downloadAsFile('stdOutputName', 'name_std.txt')">Tải về</button></div></div>
+                        <textarea id="stdOutputName" placeholder="Kết quả Name đã chuẩn hoá..."></textarea>
                     </div>
                     <div class="output-area">
-                        <div class="output-header"><h4>VP đã chuẩn hóa</h4><div class="button-group"><button class="secondary" onclick="copyToClipboard('reviewVp')">Copy</button><button class="secondary" onclick="downloadAsFile('reviewVp', 'vp_std.txt')">Tải về</button></div></div>
-                        <textarea id="reviewVp" placeholder="..."></textarea>
+                        <div class="output-header"><h3>VP đã chuẩn hoá</h3><div class="button-group"><button class="secondary" onclick="copyToClipboard('stdOutputVp')">Copy</button><button class="secondary" onclick="downloadAsFile('stdOutputVp', 'vp_std.txt')">Tải về</button></div></div>
+                        <textarea id="stdOutputVp" placeholder="Kết quả VP đã chuẩn hoá..."></textarea>
                     </div>
                     <div class="output-area">
-                        <div class="output-header"><h4>Rule đã chuẩn hóa</h4><div class="button-group"><button class="secondary" onclick="copyToClipboard('reviewRule')">Copy</button><button class="secondary" onclick="downloadAsFile('reviewRule', 'rule_std.txt')">Tải về</button></div></div>
-                        <textarea id="reviewRule" placeholder="..."></textarea>
+                        <div class="output-header"><h3>Rule đã chuẩn hoá</h3><div class="button-group"><button class="secondary" onclick="copyToClipboard('stdOutputRule')">Copy</button><button class="secondary" onclick="downloadAsFile('stdOutputRule', 'rule_std.txt')">Tải về</button></div></div>
+                        <textarea id="stdOutputRule" placeholder="Kết quả Rule đã chuẩn hoá..."></textarea>
                     </div>
                 </div>
             </details>
 
             <details>
-                <summary>2. Chuẩn hóa file Name tùy chỉnh</summary>
-                <textarea id="inputNameStd" placeholder="Dán nội dung file Name vào đây, hoặc chọn file..."></textarea>
-                <div class="button-group">
-                     <input type="file" id="fileNameStd" class="file-input-hidden" accept=".txt,text/plain">
-                     <button class="secondary" onclick="document.getElementById('fileNameStd').click()">Chọn File</button>
-                     <button id="processNameStd">Chuẩn hoá Name</button>
-                </div>
-                <div class="output-area" style="margin-top:20px;">
-                    <div class="output-header"><h4>Kết quả Name đã chuẩn hóa</h4><div class="button-group"><button class="secondary" onclick="copyToClipboard('outputNameStd')">Copy</button><button class="secondary" onclick="downloadAsFile('outputNameStd', 'name_custom_std.txt')">Tải về</button></div></div>
-                    <textarea id="outputNameStd" placeholder="..."></textarea>
-                </div>
-            </details>
-
-            <details>
-                <summary>3. Chuẩn hóa file VP tùy chỉnh</summary>
-                <textarea id="inputVpStd" placeholder="Dán nội dung file VP vào đây, hoặc chọn file..."></textarea>
-                <div class="button-group">
-                     <input type="file" id="fileVpStd" class="file-input-hidden" accept=".txt,text/plain">
-                     <button class="secondary" onclick="document.getElementById('fileVpStd').click()">Chọn File</button>
-                     <button id="processVpStd">Chuẩn hoá VP</button>
-                </div>
-                <div class="output-area" style="margin-top:20px;">
-                     <div class="output-header"><h4>Kết quả VP đã chuẩn hóa</h4><div class="button-group"><button class="secondary" onclick="copyToClipboard('outputVpStd')">Copy</button><button class="secondary" onclick="downloadAsFile('outputVpStd', 'vp_custom_std.txt')">Tải về</button></div></div>
-                    <textarea id="outputVpStd" placeholder="..."></textarea>
+                <summary>2. Chuẩn hóa thủ công File Tên (Name)</summary>
+                <div id="standardizer-name">
+                    <textarea placeholder="Dán nội dung Name vào đây..."></textarea>
+                    <div class="drop-zone">Kéo thả hoặc chọn file Name (.txt)</div>
+                    <input type="file" class="file-input-hidden" multiple accept=".txt,text/plain">
+                    <ul class="file-list"></ul>
+                    <div class="button-group"><button>Chuẩn hoá Name</button></div>
+                    <div class="output-area" style="margin-top:20px;">
+                        <div class="output-header"><h3>Kết quả Name</h3><div class="button-group"><button class="secondary">Copy</button><button class="secondary">Tải về</button></div></div>
+                        <textarea placeholder="Kết quả Name đã chuẩn hoá..."></textarea>
+                    </div>
                 </div>
             </details>
 
             <details>
-                <summary>4. Chuẩn hóa file Rule tùy chỉnh</summary>
-                 <textarea id="inputRuleStd" placeholder="Dán nội dung file Rule vào đây, hoặc chọn file..."></textarea>
-                <div class="button-group">
-                     <input type="file" id="fileRuleStd" class="file-input-hidden" accept=".txt,text/plain">
-                     <button class="secondary" onclick="document.getElementById('fileRuleStd').click()">Chọn File</button>
-                     <button id="processRuleStd">Chuẩn hoá Rule</button>
-                </div>
-                <div class="output-area" style="margin-top:20px;">
-                    <div class="output-header"><h4>Kết quả Rule đã chuẩn hóa</h4><div class="button-group"><button class="secondary" onclick="copyToClipboard('outputRuleStd')">Copy</button><button class="secondary" onclick="downloadAsFile('outputRuleStd', 'rule_custom_std.txt')">Tải về</button></div></div>
-                    <textarea id="outputRuleStd" placeholder="..."></textarea>
+                <summary>3. Chuẩn hóa thủ công File Việt Phrase (VP)</summary>
+                <div id="standardizer-vp">
+                    <textarea placeholder="Dán nội dung VP vào đây..."></textarea>
+                    <div class="drop-zone">Kéo thả hoặc chọn file VP (.txt)</div>
+                    <input type="file" class="file-input-hidden" multiple accept=".txt,text/plain">
+                    <ul class="file-list"></ul>
+                    <div class="button-group"><button>Chuẩn hoá VP</button></div>
+                    <div class="output-area" style="margin-top:20px;">
+                        <div class="output-header"><h3>Kết quả VP</h3><div class="button-group"><button class="secondary">Copy</button><button class="secondary">Tải về</button></div></div>
+                        <textarea placeholder="Kết quả VP đã chuẩn hoá..."></textarea>
+                    </div>
                 </div>
             </details>
+
+            <details>
+                <summary>4. Chuẩn hóa thủ công File Luật (Rule)</summary>
+                 <div id="standardizer-rule">
+                    <textarea placeholder="Dán nội dung Rule vào đây..."></textarea>
+                    <div class="drop-zone">Kéo thả hoặc chọn file Rule (.txt)</div>
+                    <input type="file" class="file-input-hidden" multiple accept=".txt,text/plain">
+                    <ul class="file-list"></ul>
+                    <div class="button-group"><button>Chuẩn hoá Rule</button></div>
+                    <div class="output-area" style="margin-top:20px;">
+                        <div class="output-header"><h3>Kết quả Rule</h3><div class="button-group"><button class="secondary">Copy</button><button class="secondary">Tải về</button></div></div>
+                        <textarea placeholder="Kết quả Rule đã chuẩn hoá..."></textarea>
+                    </div>
+                </div>
+            </details>
+
         </section>
-    <div>
+        <div>
             <a href="CreatVPNamesNSFW.html">Reload</a>
         </div>
     </main>
@@ -302,12 +343,9 @@
         // --- DOM Elements ---
         const apiKeysInput = document.getElementById('apiKeysInput');
         const promptInput = document.getElementById('promptInput');
-        const mainTextInput = document.getElementById('mainTextInput');
-        const dropZone = document.getElementById('drop-zone');
-        const fileInput = document.getElementById('fileInput');
-        const separatorInput = document.getElementById('separatorInput');
-        const prepareChunksBtn = document.getElementById('prepareChunksBtn');
-        const chunkListElem = document.getElementById('chunkList');
+        const dropZoneGemini = document.getElementById('drop-zone-gemini');
+        const fileInputGemini = document.getElementById('fileInput-gemini');
+        const fileListGemini = document.getElementById('fileList-gemini');
         const startBtn = document.getElementById('startBtn');
         const resumeBtn = document.getElementById('resumeBtn');
         const saveStateBtn = document.getElementById('saveStateBtn');
@@ -316,133 +354,126 @@
         const outputName = document.getElementById('outputName');
         const outputVp = document.getElementById('outputVp');
         const outputRule = document.getElementById('outputRule');
-
-        // Standardizer DOM Elements
-        const standardizeGeneratedBtn = document.getElementById('standardizeGeneratedBtn');
-        const reviewName = document.getElementById('reviewName');
-        const reviewVp = document.getElementById('reviewVp');
-        const reviewRule = document.getElementById('reviewRule');
         
-        const inputNameStd = document.getElementById('inputNameStd');
-        const fileNameStd = document.getElementById('fileNameStd');
-        const processNameStd = document.getElementById('processNameStd');
-        const outputNameStd = document.getElementById('outputNameStd');
-        
-        const inputVpStd = document.getElementById('inputVpStd');
-        const fileVpStd = document.getElementById('fileVpStd');
-        const processVpStd = document.getElementById('processVpStd');
-        const outputVpStd = document.getElementById('outputVpStd');
+        // Auto-Standardizer Elements
+        const runGeneratedStandardizerBtn = document.getElementById('runGeneratedStandardizerBtn');
+        const stdOutputName = document.getElementById('stdOutputName');
+        const stdOutputVp = document.getElementById('stdOutputVp');
+        const stdOutputRule = document.getElementById('stdOutputRule');
 
-        const inputRuleStd = document.getElementById('inputRuleStd');
-        const fileRuleStd = document.getElementById('fileRuleStd');
-        const processRuleStd = document.getElementById('processRuleStd');
-        const outputRuleStd = document.getElementById('outputRuleStd');
 
         // --- State Variables ---
-        let chunksToProcess = [];
+        let filesToProcess = [];
         let isProcessing = false;
+        
         const DEFAULT_PROMPT = `Mục tiêu: Phân tích văn bản tiếng Trung, trích xuất và dịch các thành phần cụ thể theo yêu cầu.\n\nYêu cầu chi tiết:\n\n1.  **Nhiệm vụ Phân tích**: Từ văn bản đầu vào, thực hiện ba nhiệm vụ sau:\n    *   **Nhiệm vụ 1: Dịch Tên**: Tìm tất cả tên riêng (tên người, địa danh, môn phái, công pháp, chiêu thức), tên chung và dịch chúng sang Hán Việt.\n    *   **Nhiệm vụ 2: Dịch Cụm Từ (Viet Phrase)**: Tìm các cụm từ hoặc cấu trúc câu phổ biến, không quá 6 ký tự và dịch sang tiếng Việt tự nhiên, dễ hiểu, giữ văn phong cổ trang.\n    *   **Nhiệm vụ 3: Tạo Luật Nhân**: Tìm các cấu trúc có chứa số hoặc danh từ có thể thay thế, không quá 6 ký tự để tạo ra quy tắc chung, sử dụng placeholder {0}, {1}.\n\n2.  **Định dạng đầu ra BẮT BUỘC**:\n    *   Kết quả phải là văn bản thuần túy, KHÔNG được chứa markdown hay bất kỳ lời giải thích nào.\n    *   Nội dung phải được chia thành BA phần, kết quả dịch chỉ sử dụng ký tự in hoa hợp lý với tên, không sử dụng ký tự in hoa với vp và luật , bắt đầu bằng các tiêu đề: "- tên:", "- việt phrase:", "- luật nhân:".\n    *   Mỗi mục trong các phần phải theo định dạng \`Tiếng Trung=Tiếng Việt\`.\n\n**QUY TẮC TUYỆT ĐỐI**: Chỉ được trả về kết quả theo đúng định dạng đã yêu cầu, không có markdown.`;
 
         // --- Event Listeners ---
         document.addEventListener('DOMContentLoaded', loadState);
-        dropZone.addEventListener('click', () => fileInput.click());
-        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
-        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-        dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); handleFileDrop(e.dataTransfer.files); });
-        fileInput.addEventListener('change', (e) => handleFileDrop(e.target.files));
-        prepareChunksBtn.addEventListener('click', handlePrepareChunks);
+        
+        // Gemini listeners
+        dropZoneGemini.addEventListener('click', () => fileInputGemini.click());
+        dropZoneGemini.addEventListener('dragover', (e) => { e.preventDefault(); dropZoneGemini.classList.add('dragover'); });
+        dropZoneGemini.addEventListener('dragleave', () => dropZoneGemini.classList.remove('dragover'));
+        dropZoneGemini.addEventListener('drop', (e) => { e.preventDefault(); dropZoneGemini.classList.remove('dragover'); handleFilesGemini(e.dataTransfer.files); });
+        fileInputGemini.addEventListener('change', (e) => handleFilesGemini(e.target.files));
         startBtn.addEventListener('click', () => startProcessing(false));
         resumeBtn.addEventListener('click', () => startProcessing(true));
         saveStateBtn.addEventListener('click', () => { saveState(); alert('Đã lưu phiên làm việc!'); });
         clearStateBtn.addEventListener('click', () => { if (confirm('Bạn có chắc muốn xóa toàn bộ dữ liệu và làm mới không?')) { clearState(); } });
         
-        // Standardizer Listeners
-        standardizeGeneratedBtn.addEventListener('click', handleStandardizeGenerated);
-        processNameStd.addEventListener('click', () => handleStandardizeCustom('Name', inputNameStd, fileNameStd, outputNameStd));
-        processVpStd.addEventListener('click', () => handleStandardizeCustom('VP', inputVpStd, fileVpStd, outputVpStd));
-        processRuleStd.addEventListener('click', () => handleStandardizeCustom('Rule', inputRuleStd, fileRuleStd, outputRuleStd));
-        fileNameStd.addEventListener('change', (e) => handleFileSelection(e.target, inputNameStd));
-        fileVpStd.addEventListener('change', (e) => handleFileSelection(e.target, inputVpStd));
-        fileRuleStd.addEventListener('change', (e) => handleFileSelection(e.target, inputRuleStd));
+        // Standardizer listeners
+        runGeneratedStandardizerBtn.addEventListener('click', handleGeneratedStandardize);
+        setupManualStandardizer('name');
+        setupManualStandardizer('vp');
+        setupManualStandardizer('rule');
 
 
         // --- State Management ---
         function saveState() {
             const state = {
-                apiKeys: apiKeysInput.value, prompt: promptInput.value, mainText: mainTextInput.value, chunks: chunksToProcess,
-                outputName: outputName.value, outputVp: outputVp.value, outputRule: outputRule.value,
+                apiKeys: apiKeysInput.value,
+                prompt: promptInput.value,
+                files: filesToProcess.map(f => ({ name: f.name, status: f.status })),
+                outputName: outputName.value,
+                outputVp: outputVp.value,
+                outputRule: outputRule.value,
             };
-            localStorage.setItem('geminiChunkState', JSON.stringify(state));
+            localStorage.setItem('geminiAnalyzerState', JSON.stringify(state));
         }
 
         function loadState() {
-            const stateJSON = localStorage.getItem('geminiChunkState');
+            const stateJSON = localStorage.getItem('geminiAnalyzerState');
             if (stateJSON) {
                 const state = JSON.parse(stateJSON);
                 apiKeysInput.value = state.apiKeys || '';
                 promptInput.value = state.prompt || DEFAULT_PROMPT;
-                mainTextInput.value = state.mainText || '';
-                chunksToProcess = state.chunks || [];
+                filesToProcess = state.files.map(f => ({ name: f.name, status: f.status, file: null }));
                 outputName.value = state.outputName || '';
                 outputVp.value = state.outputVp || '';
                 outputRule.value = state.outputRule || '';
-                updateChunkListUI();
+                updateFileListGeminiUI();
                 updateProgressCounter();
-            } else { promptInput.value = DEFAULT_PROMPT; }
+            } else {
+                promptInput.value = DEFAULT_PROMPT;
+            }
         }
 
         function clearState() {
-            localStorage.removeItem('geminiChunkState');
-            chunksToProcess = []; isProcessing = false;
-            apiKeysInput.value = ''; promptInput.value = DEFAULT_PROMPT; mainTextInput.value = '';
-            outputName.value = ''; outputVp.value = ''; outputRule.value = '';
-            fileInput.value = '';
-            reviewName.value = ''; reviewVp.value = ''; reviewRule.value = '';
-            inputNameStd.value = ''; outputNameStd.value = ''; fileNameStd.value = '';
-            inputVpStd.value = ''; outputVpStd.value = ''; fileVpStd.value = '';
-            inputRuleStd.value = ''; outputRuleStd.value = ''; fileRuleStd.value = '';
-            updateChunkListUI(); updateProgressCounter();
+            localStorage.removeItem('geminiAnalyzerState');
+            filesToProcess = [];
+            isProcessing = false;
+            apiKeysInput.value = '';
+            promptInput.value = DEFAULT_PROMPT;
+            outputName.value = '';
+            outputVp.value = '';
+            outputRule.value = '';
+            fileInputGemini.value = '';
+            stdOutputName.value = '';
+            stdOutputVp.value = '';
+            stdOutputRule.value = '';
+            
+            // Clear manual standardizers as well
+            ['name', 'vp', 'rule'].forEach(type => {
+                const container = document.getElementById(`standardizer-${type}`);
+                container.querySelector('textarea:first-of-type').value = '';
+                container.querySelector('textarea:last-of-type').value = '';
+                container.querySelector('.file-list').innerHTML = '';
+                container.fileData = [];
+            });
+
+            updateFileListGeminiUI();
+            updateProgressCounter();
         }
 
-        // --- File & Chunk Handling ---
-        async function handleFileDrop(files) {
-            for (const file of files) {
-                try {
-                    const content = await readFileAsText(file);
-                    mainTextInput.value += `\n\n--- Nội dung từ file: ${file.name} ---\n\n${content}`;
-                } catch(e) { alert(`Không thể đọc file: ${file.name}`); }
+        // --- File Handling ---
+        function handleFilesGemini(newFiles) {
+            for (const file of newFiles) {
+                if (!filesToProcess.some(f => f.name === file.name)) {
+                     filesToProcess.push({ file: file, name: file.name, status: 'pending' });
+                }
             }
-        }
-        
-        function handlePrepareChunks() {
-            const separatorText = separatorInput.value.replace(/\\n/g, '\n');
-            if (!separatorText) { alert('Ký tự tách đoạn không được để trống.'); return; }
-            const fullText = mainTextInput.value;
-            if (!fullText.trim()) { alert('Không có văn bản nào để tách.'); return; }
-
-            const rawChunks = fullText.split(separatorText);
-            const totalRawChunks = rawChunks.length;
-            chunksToProcess = rawChunks.map(content => content.trim()).filter(content => content.length >= 20)
-                .map((content, index) => ({ id: `Đoạn ${index + 1}`, content: content, status: 'pending' }));
-            const skippedCount = totalRawChunks - chunksToProcess.length;
-            updateChunkListUI(); updateProgressCounter();
-            alert(`Đã tách thành công ${chunksToProcess.length} đoạn. Bỏ qua ${skippedCount} đoạn có độ dài dưới 20 ký tự.`);
+            updateFileListGeminiUI();
         }
 
-        function updateChunkListUI() {
-            chunkListElem.innerHTML = '';
-            chunksToProcess.forEach(chunkData => {
+        function updateFileListGeminiUI() {
+            fileListGemini.innerHTML = '';
+            filesToProcess.forEach(fileData => {
                 const li = document.createElement('li');
-                li.className = `status-${chunkData.status}`;
-                li.textContent = `${chunkData.id} (${chunkData.content.substring(0, 50)}...)`;
-                chunkListElem.appendChild(li);
+                li.className = `status-${fileData.status}`;
+                li.textContent = fileData.name;
+                fileListGemini.appendChild(li);
             });
         }
         
         function updateProgressCounter() {
-            const successCount = chunksToProcess.filter(c => c.status === 'success').length;
-            const totalCount = chunksToProcess.length;
-            progressCounter.textContent = totalCount > 0 ? `(${successCount} / ${totalCount})` : '';
+            const successCount = filesToProcess.filter(f => f.status === 'success').length;
+            const totalCount = filesToProcess.length;
+            if (totalCount > 0) {
+                progressCounter.textContent = `(${successCount} / ${totalCount})`;
+            } else {
+                progressCounter.textContent = '';
+            }
         }
         
         function readFileAsText(file) {
@@ -459,36 +490,58 @@
             if (isProcessing) { alert('Đang trong quá trình xử lý, vui lòng đợi...'); return; }
             const apiKeys = apiKeysInput.value.trim().split('\n').filter(k => k);
             if (apiKeys.length === 0) { alert('Vui lòng nhập ít nhất một API Key.'); return; }
-            let queue = resumeOnly ? chunksToProcess.filter(c => c.status === 'failed') : chunksToProcess.slice();
-            if (resumeOnly) { queue.forEach(c => c.status = 'pending'); }
-            if (queue.length === 0) { alert(resumeOnly ? 'Không có đoạn lỗi nào để xử lý lại.' : 'Không có đoạn nào để xử lý. Vui lòng tách đoạn trước.'); return; }
-            isProcessing = true; startBtn.disabled = true; resumeBtn.disabled = true;
-            for (const chunkData of queue) {
-                chunkData.status = 'processing';
-                updateChunkListUI();
-                try {
-                    const resultText = await callGeminiAPI(chunkData.content, apiKeys, promptInput.value);
-                    parseAndAppendResult(resultText, chunkData.id);
-                    chunkData.status = 'success';
-                } catch (error) {
-                    console.error(`Lỗi khi xử lý ${chunkData.id}:`, error);
-                    chunkData.status = 'failed';
+
+            let queue = resumeOnly ? filesToProcess.filter(f => f.status === 'failed') : filesToProcess.slice();
+            if (resumeOnly) { queue.forEach(f => f.status = 'pending'); }
+            if (queue.length === 0) { alert(resumeOnly ? 'Không có file lỗi nào để xử lý lại.' : 'Không có file nào để xử lý.'); return; }
+            
+            isProcessing = true;
+            startBtn.disabled = true;
+            resumeBtn.disabled = true;
+
+            for (const fileData of queue) {
+                if (!fileData.file) {
+                    alert(`Không tìm thấy dữ liệu file cho "${fileData.name}". Vui lòng thêm lại file này.`);
+                    fileData.status = 'failed';
+                    updateFileListGeminiUI();
+                    continue;
                 }
-                updateChunkListUI(); updateProgressCounter();
+                
+                fileData.status = 'processing';
+                updateFileListGeminiUI();
+
+                try {
+                    const content = await readFileAsText(fileData.file);
+                    const resultText = await callGeminiAPI(content, apiKeys, promptInput.value);
+                    parseAndAppendResult(resultText, fileData.name);
+                    fileData.status = 'success';
+                } catch (error) {
+                    console.error(`Lỗi khi xử lý file ${fileData.name}:`, error);
+                    fileData.status = 'failed';
+                }
+                updateFileListGeminiUI();
+                updateProgressCounter();
             }
-            isProcessing = false; startBtn.disabled = false; resumeBtn.disabled = false;
-            saveState(); alert('Đã xử lý xong!');
+
+            isProcessing = false;
+            startBtn.disabled = false;
+            resumeBtn.disabled = false;
+            saveState();
+            alert('Đã xử lý xong!');
         }
         
         async function callGeminiAPI(content, apiKeys, prompt, keyIndex = 0) {
             if (keyIndex >= apiKeys.length) { throw new Error("Tất cả API Key đều đã thất bại."); }
             const apiKey = apiKeys[keyIndex];
             const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+            const full_prompt = `${prompt}\n\n---\n\n${content}`;
+            
             const body = {
-                "contents": [{ "parts": [{ "text": `${prompt}\n\n---\n\n${content}` }] }],
+                "contents": [{ "parts": [{ "text": full_prompt }] }],
                 "generationConfig": { "temperature": 0.4, "topK": 1, "topP": 1, "maxOutputTokens": 65536 },
                 "safetySettings": [ { "category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE" }, { "category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE" }, { "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE" }, { "category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE" } ]
             };
+
             try {
                 const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
                 if (response.ok) {
@@ -503,86 +556,155 @@
             }
         }
 
-        function parseAndAppendResult(geminiText, sourceChunkId) {
-            const separator = `\n\n--- Kết quả từ: ${sourceChunkId} ---\n\n`;
+        function parseAndAppendResult(geminiText, sourceFileName) {
+            const separator = `\n\n--- Kết quả từ file: ${sourceFileName} ---\n\n`;
             const nameMarker = "- tên:"; const vpMarker = "- việt phrase:"; const ruleMarker = "- luật nhân:";
-            const nameIndex = geminiText.indexOf(nameMarker); const vpIndex = geminiText.indexOf(vpMarker); const ruleIndex = geminiText.indexOf(ruleMarker);
+            
             let nameContent = '', vpContent = '', ruleContent = '';
-            if (nameIndex !== -1 && vpIndex !== -1) nameContent = geminiText.substring(nameIndex + nameMarker.length, vpIndex).trim();
-            if (vpIndex !== -1 && ruleIndex !== -1) vpContent = geminiText.substring(vpIndex + vpMarker.length, ruleIndex).trim();
-            if (ruleIndex !== -1) ruleContent = geminiText.substring(ruleIndex + ruleMarker.length).trim();
-            if (!nameContent && !vpContent && !ruleContent) nameContent = geminiText;
+
+            let sortedIndices = [
+                { marker: nameMarker, index: geminiText.indexOf(nameMarker) },
+                { marker: vpMarker, index: geminiText.indexOf(vpMarker) },
+                { marker: ruleMarker, index: geminiText.indexOf(ruleMarker) }
+            ].filter(i => i.index !== -1).sort((a, b) => a.index - b.index);
+
+            if (sortedIndices.length > 0) {
+                for(let i = 0; i < sortedIndices.length; i++) {
+                    const current = sortedIndices[i];
+                    const next = sortedIndices[i+1];
+                    const content = geminiText.substring(current.index + current.marker.length, next ? next.index : undefined).trim();
+
+                    if(current.marker === nameMarker) nameContent = content;
+                    else if(current.marker === vpMarker) vpContent = content;
+                    else if(current.marker === ruleMarker) ruleContent = content;
+                }
+            } else {
+                 nameContent = geminiText; // Fallback if no markers found
+            }
+
             if (nameContent) outputName.value += (outputName.value ? separator : '') + nameContent;
             if (vpContent) outputVp.value += (outputVp.value ? separator : '') + vpContent;
             if (ruleContent) outputRule.value += (outputRule.value ? separator : '') + ruleContent;
         }
-        
+
         // --- Standardizer Logic ---
-        function standardizeText(inputText) {
-            if (!inputText || !inputText.trim()) return '';
+        function standardizeText(text) {
+            if (!text.trim()) return '';
+
             const uniqueEntries = new Map();
-            const lines = inputText.split('\n');
+            const lines = text.split('\n');
+
             for (const line of lines) {
                 const trimmedLine = line.trim();
                 if (!trimmedLine || trimmedLine.startsWith('---')) continue;
+
                 const separatorIndex = trimmedLine.indexOf('=');
                 if (separatorIndex === -1) continue;
-                const key = trimmedLine.substring(0, separatorIndex).trim();
-                const value = trimmedLine.substring(separatorIndex + 1).trim();
-                if (key && !uniqueEntries.has(key)) { uniqueEntries.set(key, value); }
+
+                const chineseKey = trimmedLine.substring(0, separatorIndex).trim();
+                const vietnameseValue = trimmedLine.substring(separatorIndex + 1).trim();
+
+                if (chineseKey && !uniqueEntries.has(chineseKey)) {
+                    uniqueEntries.set(chineseKey, vietnameseValue);
+                }
             }
+
             const resultLines = [];
-            uniqueEntries.forEach((value, key) => resultLines.push(`${key}=${value}`));
+            uniqueEntries.forEach((value, key) => {
+                resultLines.push(`${key}=${value}`);
+            });
+
             return resultLines.join('\n');
         }
 
-        function handleStandardizeGenerated() {
-            const nameContent = outputName.value;
-            const vpContent = outputVp.value;
-            const ruleContent = outputRule.value;
-            if (!nameContent && !vpContent && !ruleContent) {
-                alert('Chưa có dữ liệu nào được tạo từ bước xử lý Gemini.');
+        function handleGeneratedStandardize() {
+            if (!outputName.value && !outputVp.value && !outputRule.value) {
+                alert('Chưa có dữ liệu nào được tạo từ Gemini để chuẩn hoá. Vui lòng chạy xử lý trước.');
                 return;
             }
-            reviewName.value = standardizeText(nameContent);
-            reviewVp.value = standardizeText(vpContent);
-            reviewRule.value = standardizeText(ruleContent);
-            alert('Đã chuẩn hóa xong 3 file kết quả!');
-        }
 
-        async function handleStandardizeCustom(type, inputElem, fileElem, outputElem) {
-            let combinedText = inputElem.value;
-            if (fileElem.files.length > 0) {
-                try {
-                    const fileContent = await readFileAsText(fileElem.files[0]);
-                    combinedText += "\n" + fileContent;
-                } catch (error) { alert(`Không thể đọc file đã chọn.`); }
-            }
-            if (!combinedText.trim()) { alert(`Không có dữ liệu để chuẩn hoá cho ${type}.`); return; }
-            outputElem.value = standardizeText(combinedText);
-            alert(`Đã chuẩn hoá xong file ${type}!`);
+            stdOutputName.value = standardizeText(outputName.value);
+            stdOutputVp.value = standardizeText(outputVp.value);
+            stdOutputRule.value = standardizeText(outputRule.value);
+
+            alert('Đã chuẩn hoá xong dữ liệu từ Gemini!');
         }
         
-        async function handleFileSelection(fileInput, targetTextarea) {
-             if (fileInput.files.length > 0) {
-                try {
-                    const fileContent = await readFileAsText(fileInput.files[0]);
-                    targetTextarea.value += "\n" + fileContent;
-                    fileInput.value = ''; // Reset file input to allow selecting the same file again
-                } catch(e) { alert('Không thể đọc file đã chọn.'); }
-             }
+        // =====================================================================
+        // === LOGIC CHUẨN HÓA THỦ CÔNG MỚI, CHÍNH XÁC NHẤT               ===
+        // =====================================================================
+        function setupManualStandardizer(type) {
+            const container = document.getElementById(`standardizer-${type}`);
+            const inputTextArea = container.querySelector('textarea:first-of-type');
+            const dropZone = container.querySelector('.drop-zone');
+            const fileInput = container.querySelector('.file-input-hidden');
+            const fileList = container.querySelector('.file-list');
+            const standardizeBtn = container.querySelector('.button-group button');
+            const outputTextArea = container.querySelector('.output-area textarea');
+            const copyBtn = container.querySelector('.output-area .button-group button:first-child');
+            const downloadBtn = container.querySelector('.output-area .button-group button:last-child');
+            
+            container.fileData = []; // Store files specific to this instance
+
+            dropZone.addEventListener('click', () => fileInput.click());
+            dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+            dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('dragover');
+                handleFiles(e.dataTransfer.files);
+            });
+            fileInput.addEventListener('change', (e) => {
+                handleFiles(e.target.files);
+                e.target.value = ''; // Reset to allow same file selection
+            });
+
+            function handleFiles(newFiles) {
+                for (const file of newFiles) {
+                    if (!container.fileData.some(f => f.name === file.name)) {
+                        container.fileData.push({ file: file, name: file.name });
+                    }
+                }
+                updateUI();
+            }
+
+            function updateUI() {
+                fileList.innerHTML = '';
+                container.fileData.forEach(f => {
+                    const li = document.createElement('li');
+                    li.textContent = f.name;
+                    fileList.appendChild(li);
+                });
+            }
+
+            standardizeBtn.addEventListener('click', async () => {
+                let combinedText = inputTextArea.value;
+                for (const fileData of container.fileData) {
+                    try {
+                        const fileContent = await readFileAsText(fileData.file);
+                        combinedText += "\n" + fileContent;
+                    } catch (error) {
+                        alert(`Lỗi đọc file ${fileData.name}`);
+                    }
+                }
+                outputTextArea.value = standardizeText(combinedText);
+                alert(`Đã chuẩn hoá xong ${type.toUpperCase()}!`);
+            });
+
+            copyBtn.addEventListener('click', () => copyToClipboard(outputTextArea));
+            downloadBtn.addEventListener('click', () => downloadAsFile(outputTextArea, `${type}_manual_std.txt`));
         }
 
         // --- Utility Functions ---
-        function copyToClipboard(elementId) {
-            const textarea = document.getElementById(elementId);
+        function copyToClipboard(element) {
+            const textarea = (typeof element === 'string') ? document.getElementById(element) : element;
             textarea.select();
             document.execCommand('copy');
             alert('Đã copy nội dung!');
         }
 
-        function downloadAsFile(elementId, filename) {
-            const textarea = document.getElementById(elementId);
+        function downloadAsFile(element, filename) {
+            const textarea = (typeof element === 'string') ? document.getElementById(element) : element;
             const blob = new Blob([textarea.value], { type: 'text/plain;charset=utf-8' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
