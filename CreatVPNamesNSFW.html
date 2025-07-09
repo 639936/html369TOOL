@@ -33,10 +33,13 @@
             margin: 0 auto;
         }
 
-        h1, h2 {
+        h1, h2, h3, h4 {
             color: var(--accent-color);
-            border-bottom: 2px solid var(--secondary-color);
-            padding-bottom: 10px;
+        }
+
+        h2, h3 {
+             border-bottom: 2px solid var(--secondary-color);
+             padding-bottom: 10px;
         }
         
         .grid-container {
@@ -246,42 +249,45 @@
             </details>
 
             <details>
-                <summary>2. Chuẩn hóa file Name</summary>
-                 <div class="output-area">
-                    <textarea id="inputNameStd" placeholder="Dán nội dung file Name vào đây, hoặc chọn file..."></textarea>
-                    <div class="button-group">
-                         <input type="file" id="fileNameStd" class="file-input-hidden" accept=".txt,text/plain">
-                         <button class="secondary" onclick="document.getElementById('fileNameStd').click()">Chọn File</button>
-                         <button id="processNameStd">Chuẩn hoá Name</button>
-                    </div>
-                    <textarea id="outputNameStd" placeholder="Kết quả Name đã chuẩn hóa..."></textarea>
-                 </div>
+                <summary>2. Chuẩn hóa file Name tùy chỉnh</summary>
+                <textarea id="inputNameStd" placeholder="Dán nội dung file Name vào đây, hoặc chọn file..."></textarea>
+                <div class="button-group">
+                     <input type="file" id="fileNameStd" class="file-input-hidden" accept=".txt,text/plain">
+                     <button class="secondary" onclick="document.getElementById('fileNameStd').click()">Chọn File</button>
+                     <button id="processNameStd">Chuẩn hoá Name</button>
+                </div>
+                <div class="output-area" style="margin-top:20px;">
+                    <div class="output-header"><h4>Kết quả Name đã chuẩn hóa</h4><div class="button-group"><button class="secondary" onclick="copyToClipboard('outputNameStd')">Copy</button><button class="secondary" onclick="downloadAsFile('outputNameStd', 'name_custom_std.txt')">Tải về</button></div></div>
+                    <textarea id="outputNameStd" placeholder="..."></textarea>
+                </div>
             </details>
 
             <details>
-                <summary>3. Chuẩn hóa file Việt Phrase</summary>
-                <div class="output-area">
-                    <textarea id="inputVpStd" placeholder="Dán nội dung file VP vào đây, hoặc chọn file..."></textarea>
-                    <div class="button-group">
-                         <input type="file" id="fileVpStd" class="file-input-hidden" accept=".txt,text/plain">
-                         <button class="secondary" onclick="document.getElementById('fileVpStd').click()">Chọn File</button>
-                         <button id="processVpStd">Chuẩn hoá VP</button>
-                    </div>
-                    <textarea id="outputVpStd" placeholder="Kết quả VP đã chuẩn hóa..."></textarea>
-                 </div>
+                <summary>3. Chuẩn hóa file VP tùy chỉnh</summary>
+                <textarea id="inputVpStd" placeholder="Dán nội dung file VP vào đây, hoặc chọn file..."></textarea>
+                <div class="button-group">
+                     <input type="file" id="fileVpStd" class="file-input-hidden" accept=".txt,text/plain">
+                     <button class="secondary" onclick="document.getElementById('fileVpStd').click()">Chọn File</button>
+                     <button id="processVpStd">Chuẩn hoá VP</button>
+                </div>
+                <div class="output-area" style="margin-top:20px;">
+                     <div class="output-header"><h4>Kết quả VP đã chuẩn hóa</h4><div class="button-group"><button class="secondary" onclick="copyToClipboard('outputVpStd')">Copy</button><button class="secondary" onclick="downloadAsFile('outputVpStd', 'vp_custom_std.txt')">Tải về</button></div></div>
+                    <textarea id="outputVpStd" placeholder="..."></textarea>
+                </div>
             </details>
 
             <details>
-                <summary>4. Chuẩn hóa file Luật Nhân</summary>
-                 <div class="output-area">
-                    <textarea id="inputRuleStd" placeholder="Dán nội dung file Rule vào đây, hoặc chọn file..."></textarea>
-                    <div class="button-group">
-                         <input type="file" id="fileRuleStd" class="file-input-hidden" accept=".txt,text/plain">
-                         <button class="secondary" onclick="document.getElementById('fileRuleStd').click()">Chọn File</button>
-                         <button id="processRuleStd">Chuẩn hoá Rule</button>
-                    </div>
-                    <textarea id="outputRuleStd" placeholder="Kết quả Rule đã chuẩn hóa..."></textarea>
-                 </div>
+                <summary>4. Chuẩn hóa file Rule tùy chỉnh</summary>
+                 <textarea id="inputRuleStd" placeholder="Dán nội dung file Rule vào đây, hoặc chọn file..."></textarea>
+                <div class="button-group">
+                     <input type="file" id="fileRuleStd" class="file-input-hidden" accept=".txt,text/plain">
+                     <button class="secondary" onclick="document.getElementById('fileRuleStd').click()">Chọn File</button>
+                     <button id="processRuleStd">Chuẩn hoá Rule</button>
+                </div>
+                <div class="output-area" style="margin-top:20px;">
+                    <div class="output-header"><h4>Kết quả Rule đã chuẩn hóa</h4><div class="button-group"><button class="secondary" onclick="copyToClipboard('outputRuleStd')">Copy</button><button class="secondary" onclick="downloadAsFile('outputRuleStd', 'rule_custom_std.txt')">Tải về</button></div></div>
+                    <textarea id="outputRuleStd" placeholder="..."></textarea>
+                </div>
             </details>
         </section>
     </main>
@@ -556,6 +562,7 @@
                 try {
                     const fileContent = await readFileAsText(fileInput.files[0]);
                     targetTextarea.value += "\n" + fileContent;
+                    fileInput.value = ''; // Reset file input to allow selecting the same file again
                 } catch(e) { alert('Không thể đọc file đã chọn.'); }
              }
         }
