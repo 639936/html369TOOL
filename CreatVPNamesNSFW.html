@@ -435,7 +435,7 @@
             if (!fullText.trim()) { alert('Không có văn bản nào để tách.'); return; }
         
             const rawChunks = fullText.split(separatorText).filter(c => c.trim().length > 0);
-            const CHUNK_GROUP_SIZE = 5;
+            const CHUNK_GROUP_SIZE = 30;
             const newGroupedChunks = [];
         
             for (let i = 0; i < rawChunks.length; i += CHUNK_GROUP_SIZE) {
