@@ -198,7 +198,7 @@
                 <div class="input-group">
                     <label for="separatorInput">Ký tự tách đoạn:</label>
                     <input type="text" id="separatorInput" value="\n\n" placeholder="\n\n">
-                    <button id="prepareChunksBtn">Tách thành các đoạn</button>
+                    <button id="prepareChunksBtn">Tách & Gộp 5 đoạn làm 1</button>
                 </div>
                 <p>Danh sách các đoạn cần xử lý <span id="progress-counter"></span></p>
                 <ul id="chunkList" class="chunk-list"></ul>
@@ -244,7 +244,7 @@
             <h2>Công cụ Chuẩn hoá Dữ liệu</h2>
             <div class="options-group">
                 <input type="checkbox" id="standardizer-remove-special-chars" checked>
-                <label for="standardizer-remove-special-chars">Xóa dòng chứa ký tự đặc biệt khi chuẩn hóa</label>
+                <label for="standardizer-remove-special-chars">Xóa dòng chứa ký tự đặc biệt khi chuẩn hóa (loại trừ "{}")</label>
             </div>
             <details open>
                 <summary>1. Chuẩn hóa file vừa được tạo</summary>
@@ -420,25 +420,46 @@
         async function handleFileDrop(files) {
             for (const file of files) {
                 try {
+                    // *** MODIFIED LOGIC ***
                     const content = await readFileAsText(file);
                     mainTextInput.value += `\n\n--- Nội dung từ file: ${file.name} ---\n\n${content}`;
                 } catch(e) { alert(`Không thể đọc file: ${file.name}`); }
             }
         }
         
+        // *** MODIFIED FUNCTION ***
         function handlePrepareChunks() {
             const separatorText = separatorInput.value.replace(/\\n/g, '\n');
             if (!separatorText) { alert('Ký tự tách đoạn không được để trống.'); return; }
             const fullText = mainTextInput.value;
             if (!fullText.trim()) { alert('Không có văn bản nào để tách.'); return; }
-
-            const rawChunks = fullText.split(separatorText);
-            const totalRawChunks = rawChunks.length;
-            chunksToProcess = rawChunks.map(content => content.trim()).filter(content => content.length >= 100)
-                .map((content, index) => ({ id: `Đoạn ${index + 1}`, content: content, status: 'pending' }));
-            const skippedCount = totalRawChunks - chunksToProcess.length;
-            updateChunkListUI(); updateProgressCounter();
-            alert(`Đã tách thành công ${chunksToProcess.length} đoạn. Bỏ qua ${skippedCount} đoạn có độ dài dưới 50 ký tự.`);
+        
+            const rawChunks = fullText.split(separatorText).filter(c => c.trim().length > 0);
+            const CHUNK_GROUP_SIZE = 5;
+            const newGroupedChunks = [];
+        
+            for (let i = 0; i < rawChunks.length; i += CHUNK_GROUP_SIZE) {
+                const group = rawChunks.slice(i, i + CHUNK_GROUP_SIZE);
+                const combinedContent = group.join(separatorText);
+                
+                // Đánh số ID dựa trên các đoạn nhỏ ban đầu
+                const startChunkNum = i + 1;
+                const endChunkNum = i + group.length;
+                const chunkId = `Đoạn gộp ${startChunkNum}-${endChunkNum}`;
+        
+                if (combinedContent.length >= 100) { // Lọc các đoạn gộp quá ngắn
+                     newGroupedChunks.push({
+                        id: chunkId,
+                        content: combinedContent,
+                        status: 'pending'
+                    });
+                }
+            }
+        
+            chunksToProcess = newGroupedChunks;
+            updateChunkListUI();
+            updateProgressCounter();
+            alert(`Đã tách và gộp thành công ${chunksToProcess.length} đoạn lớn (từ ${rawChunks.length} đoạn nhỏ).`);
         }
 
         function updateChunkListUI() {
@@ -457,10 +478,32 @@
             progressCounter.textContent = totalCount > 0 ? `(${successCount} / ${totalCount})` : '';
         }
         
+        // *** MODIFIED FUNCTION ***
         function readFileAsText(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
-                reader.onload = () => resolve(reader.result);
+                reader.onload = () => {
+                    const textContent = reader.result;
+                    if (file.type === 'text/html' || file.name.endsWith('.html')) {
+                        try {
+                            const parser = new DOMParser();
+                            const doc = parser.parseFromString(textContent, 'text/html');
+                            const contentElement = doc.querySelector('.content');
+                            if (contentElement) {
+                                console.log(`Trích xuất nội dung từ .content của file ${file.name}`);
+                                resolve(contentElement.textContent || '');
+                            } else {
+                                console.log(`Không tìm thấy .content trong ${file.name}, lấy toàn bộ nội dung.`);
+                                resolve(textContent); // Fallback to full text
+                            }
+                        } catch (e) {
+                            console.error(`Lỗi parse HTML file ${file.name}:`, e);
+                            resolve(textContent); // Fallback on parsing error
+                        }
+                    } else {
+                        resolve(textContent); // Not an HTML file
+                    }
+                };
                 reader.onerror = () => reject(reader.error);
                 reader.readAsText(file);
             });
@@ -534,7 +577,8 @@
         // ================================================================
 
         const VIETNAMESE_CHARS = 'àáâãèéêìíòóôõùúăđĩũơưạảấầẩẫậắằẳẵặẹẻẽếềểễệỉịọỏốồổỗộớờởỡợụủứừửữựỳýỵỷỹ';
-        const ALLOWED_CHARS_REGEX = new RegExp(`^[\u4E00-\u9FFFa-zA-Z0-9=\\s${VIETNAMESE_CHARS}${VIETNAMESE_CHARS.toUpperCase()}]+$`);
+        // *** MODIFIED REGEX *** (Added \\{\\} to allow braces)
+        const ALLOWED_CHARS_REGEX = new RegExp(`^[\u4E00-\u9FFFa-zA-Z0-9=\\s\\{\\}${VIETNAMESE_CHARS}${VIETNAMESE_CHARS.toUpperCase()}]+$`);
 
         function containsChinese(text) { return /[\u4E00-\u9FFF]/.test(text); }
         function containsSpecialChars(text) { return !ALLOWED_CHARS_REGEX.test(text); }

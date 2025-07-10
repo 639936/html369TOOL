@@ -317,7 +317,7 @@
                     <div class="button-group"><button>Chuẩn hoá Name</button></div>
                     <div class="output-area" style="margin-top:20px;">
                         <div class="output-header"><h3>Kết quả Name</h3><div class="button-group"><button class="secondary">Copy</button><button class="secondary">Tải về</button></div></div>
-                        <textarea placeholder="Kết quả Name đã chuẩn hoá..."></textarea>
+                        <textarea class="manual-output-textarea" placeholder="Kết quả Name đã chuẩn hoá..."></textarea>
                     </div>
                 </div>
             </details>
@@ -332,7 +332,7 @@
                     <div class="button-group"><button>Chuẩn hoá VP</button></div>
                     <div class="output-area" style="margin-top:20px;">
                         <div class="output-header"><h3>Kết quả VP</h3><div class="button-group"><button class="secondary">Copy</button><button class="secondary">Tải về</button></div></div>
-                        <textarea placeholder="Kết quả VP đã chuẩn hoá..."></textarea>
+                        <textarea class="manual-output-textarea" placeholder="Kết quả VP đã chuẩn hoá..."></textarea>
                     </div>
                 </div>
             </details>
@@ -347,7 +347,7 @@
                     <div class="button-group"><button>Chuẩn hoá Rule</button></div>
                     <div class="output-area" style="margin-top:20px;">
                         <div class="output-header"><h3>Kết quả Rule</h3><div class="button-group"><button class="secondary">Copy</button><button class="secondary">Tải về</button></div></div>
-                        <textarea placeholder="Kết quả Rule đã chuẩn hoá..."></textarea>
+                        <textarea class="manual-output-textarea" placeholder="Kết quả Rule đã chuẩn hoá..."></textarea>
                     </div>
                 </div>
             </details>
@@ -358,7 +358,7 @@
         </div>
     </main>
 
-    <script>
+        <script>
         // --- DOM Elements ---
         const apiKeysInput = document.getElementById('apiKeysInput');
         const promptInput = document.getElementById('promptInput');
@@ -386,7 +386,7 @@
         let filesToProcess = [];
         let isProcessing = false;
         
-        const DEFAULT_PROMPT = `Mục tiêu: Phân tích văn bản tiếng Trung, trích xuất và dịch các thành phần cụ thể theo yêu cầu.\n\nYêu cầu chi tiết:\n\n1.  **Nhiệm vụ Phân tích**: Từ văn bản đầu vào, thực hiện ba nhiệm vụ sau:\n    *   **Nhiệm vụ 1: Dịch Tên**: Tìm tất cả tên riêng (tên người, địa danh, môn phái, công pháp, chiêu thức), danh từ chung và dịch chúng sang Hán Việt.\n    *   **Nhiệm vụ 2: Dịch Cụm Từ (Viet Phrase)**: Tìm các cụm từ hoặc cấu trúc câu phổ biến (không quá 6 ký tự) và dịch sang tiếng Việt tự nhiên, dễ hiểu, giữ văn phong cổ trang.\n    *   **Nhiệm vụ 3: Tạo Luật Nhân**: Tìm các cấu trúc có chứa số hoặc danh từ có thể thay thế (cấu trúc đó không quá 6 ký tự) để tạo ra quy tắc chung, sử dụng placeholder {0}, {1}.\n\n2.  **Định dạng đầu ra BẮT BUỘC**:\n    *   Kết quả phải là văn bản thuần túy, KHÔNG được chứa markdown hay bất kỳ lời giải thích nào.\n    *   Nội dung phải được chia thành BA phần, bắt đầu bằng các tiêu đề: "- tên:", "- việt phrase:", "- luật nhân:". kết quả dịch chỉ sử dụng ký tự in hoa hợp lý với tên riêng, không sử dụng ký tự in hoa với danh từ chung, Viet Phrase và Luật Nhân.\n    *   Mỗi mục trong các phần phải theo định dạng \`Tiếng Trung=Tiếng Việt\`.\n\n**QUY TẮC TUYỆT ĐỐI**: Chỉ được trả về kết quả theo đúng định dạng đã yêu cầu, không có markdown.`;
+        const DEFAULT_PROMPT = `Mục tiêu: Phân tích văn bản tiếng Trung, trích xuất và dịch các thành phần cụ thể theo yêu cầu.\n\nYêu cầu chi tiết:\n\n1.  **Nhiệm vụ Phân tích**: Từ văn bản đầu vào, thực hiện ba nhiệm vụ sau:\n       **Nhiệm vụ 1: Dịch Tên**: Tìm tất cả tên riêng (tên người, địa danh, môn phái, công pháp, chiêu thức), danh từ chung và dịch chúng sang Hán Việt.\n       **Nhiệm vụ 2: Dịch Cụm Từ (Viet Phrase)**: Tìm các cụm từ hoặc cấu trúc câu phổ biến (không quá 6 ký tự) và dịch sang tiếng Việt tự nhiên, dễ hiểu, giữ văn phong cổ trang.\n       **Nhiệm vụ 3: Tạo Luật Nhân**: Tìm các cấu trúc có chứa số hoặc danh từ có thể thay thế (cấu trúc đó không quá 6 ký tự) để tạo ra quy tắc chung, sử dụng placeholder {0}, {1}.\n\n2.  **Định dạng đầu ra BẮT BUỘC**:\n    *   Kết quả phải là văn bản thuần túy, KHÔNG được chứa markdown hay bất kỳ lời giải thích nào.\n    *   Nội dung kết quả phải được chia thành BA phần, bắt đầu bằng các tiêu đề: "- tên:", "- việt phrase:", "- luật nhân:". kết quả dịch chỉ sử dụng ký tự in hoa hợp lý với tên riêng, chỉ sử dụng ký tự in thường với danh từ chung, việt phrase và luật nhân.\n    *   Mỗi mục trong các phần phải theo định dạng \`Tiếng Trung=tiếng việt\`.\n\n**QUY TẮC TUYỆT ĐỐI**: Chỉ được trả về kết quả theo đúng định dạng đã yêu cầu, không có markdown.`;
 
         // --- Event Listeners ---
         document.addEventListener('DOMContentLoaded', loadState);
@@ -459,7 +459,7 @@
             ['name', 'vp', 'rule'].forEach(type => {
                 const container = document.getElementById(`standardizer-${type}`);
                 container.querySelector('textarea:first-of-type').value = '';
-                const outputTextarea = container.querySelector('textarea:last-of-type');
+                const outputTextarea = container.querySelector('.manual-output-textarea'); // Sửa ở đây
                 outputTextarea.value = '';
                 outputTextarea.fullContent = '';
                 container.querySelector('.file-list').innerHTML = '';
@@ -570,7 +570,9 @@
                 const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
                 if (response.ok) {
                     const result = await response.json();
-                    if (result.candidates && result.candidates[0]) { return result.candidates[0].content.parts[0].text; }
+                    if (result.candidates && result.candidates[0] && result.candidates[0].content && result.candidates[0].content.parts && result.candidates[0].content.parts[0]) {
+                         return result.candidates[0].content.parts[0].text; 
+                    }
                 }
                 console.warn(`API Key ${keyIndex + 1} thất bại (HTTP ${response.status} hoặc không có nội dung). Thử key tiếp theo.`);
                 return await callGeminiAPI(content, apiKeys, prompt, keyIndex + 1);
@@ -581,6 +583,10 @@
         }
 
         function parseAndAppendResult(geminiText, sourceFileName) {
+            if (!geminiText) {
+                console.warn(`Không có nội dung trả về từ Gemini cho file ${sourceFileName}.`);
+                return;
+            }
             const separator = `\n\n--- Kết quả từ file: ${sourceFileName} ---\n\n`;
             const nameMarker = "- tên:"; const vpMarker = "- việt phrase:"; const ruleMarker = "- luật nhân:";
             
@@ -616,7 +622,8 @@
         // ================================================================
 
         const VIETNAMESE_CHARS = 'àáâãèéêìíòóôõùúăđĩũơưạảấầẩẫậắằẳẵặẹẻẽếềểễệỉịọỏốồổỗộớờởỡợụủứừửữựỳýỵỷỹ';
-        const ALLOWED_CHARS_REGEX = new RegExp(`^[\u4E00-\u9FFFa-zA-Z0-9=\\s${VIETNAMESE_CHARS}${VIETNAMESE_CHARS.toUpperCase()}]+$`);
+        // *** SỬA LỖI 2: Thêm \\{\\} để cho phép ký tự {} ***
+        const ALLOWED_CHARS_REGEX = new RegExp(`^[\u4E00-\u9FFFa-zA-Z0-9=\\s\\{\\}${VIETNAMESE_CHARS}${VIETNAMESE_CHARS.toUpperCase()}]+$`);
 
         function containsChinese(text) { return /[\u4E00-\u9FFF]/.test(text); }
         function containsSpecialChars(text) { return !ALLOWED_CHARS_REGEX.test(text); }
@@ -656,7 +663,7 @@
                     resultLines.push(`${key}=${value.toLowerCase()}`);
                 }
             }
-            return resultLines.join('\n');
+            return resultLines.sort().join('\n'); // Thêm .sort() để kết quả dễ nhìn hơn
         }
 
         function createContentPreview(fullContent, maxLines = 200) {
@@ -697,7 +704,8 @@
             const fileInput = container.querySelector('.file-input-hidden');
             const fileList = container.querySelector('.file-list');
             const standardizeBtn = container.querySelector('.button-group button');
-            const outputTextArea = container.querySelector('textarea:last-of-type');
+            // *** SỬA LỖI 1: Sử dụng class 'manual-output-textarea' để chọn chính xác ***
+            const outputTextArea = container.querySelector('.manual-output-textarea');
             const copyBtn = container.querySelector('.output-header .button-group button:first-child');
             const downloadBtn = container.querySelector('.output-header .button-group button:last-child');
             
@@ -753,13 +761,26 @@
             const textarea = (typeof element === 'string') ? document.getElementById(element) : element;
             const contentToCopy = textarea.fullContent !== undefined ? textarea.fullContent : textarea.value;
 
-            const tempTextarea = document.createElement('textarea');
-            tempTextarea.value = contentToCopy;
+            // navigator.clipboard is a more modern and reliable API
+            if (navigator.clipboard && window.isSecureContext) {
+                 navigator.clipboard.writeText(contentToCopy).then(() => {
+                    alert('Đã copy nội dung!');
+                }).catch(err => {
+                    console.error('Không thể copy bằng Clipboard API, thử cách cũ...', err);
+                    legacyCopy(contentToCopy);
+                });
+            } else {
+                 legacyCopy(contentToCopy);
+            }
+        }
+
+        function legacyCopy(text) {
+             const tempTextarea = document.createElement('textarea');
+            tempTextarea.value = text;
             document.body.appendChild(tempTextarea);
             tempTextarea.select();
             document.execCommand('copy');
             document.body.removeChild(tempTextarea);
-
             alert('Đã copy nội dung!');
         }
 
@@ -771,7 +792,9 @@
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
             link.download = filename;
+            document.body.appendChild(link); // Required for Firefox
             link.click();
+            document.body.removeChild(link);
             URL.revokeObjectURL(link.href);
         }
     </script>
