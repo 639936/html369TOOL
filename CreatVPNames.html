@@ -129,6 +129,20 @@
             flex-wrap: wrap;
             align-items: center;
         }
+
+        .options-group {
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: var(--secondary-color);
+            border-radius: 4px;
+        }
+        .options-group label {
+            margin-left: 5px;
+            cursor: pointer;
+        }
+        .options-group input[type="checkbox"] {
+            transform: scale(1.2);
+        }
         
         .drop-zone {
             border: 2px dashed var(--secondary-color);
@@ -266,24 +280,29 @@
         <section>
             <h2>Công cụ Chuẩn hoá Dữ liệu</h2>
             
+            <div class="options-group">
+                <input type="checkbox" id="standardizer-remove-special-chars" checked>
+                <label for="standardizer-remove-special-chars">Xóa dòng chứa ký tự đặc biệt khi chuẩn hóa</label>
+            </div>
+
             <details>
                 <summary>1. Chuẩn hóa Hàng loạt (Từ kết quả Gemini)</summary>
-                <p>Công cụ này sẽ lấy dữ liệu từ 3 ô kết quả ở trên, tự động loại bỏ các dòng trùng lặp cho từng loại và hiển thị kết quả đã làm sạch ở dưới.</p>
+                <p>Công cụ này sẽ lấy dữ liệu từ 3 ô kết quả ở trên, áp dụng các bộ lọc nâng cao và hiển thị kết quả đã làm sạch ở dưới.</p>
                 <div class="button-group">
                     <button id="runGeneratedStandardizerBtn">Bắt đầu chuẩn hoá hàng loạt</button>
                 </div>
                 <div class="full-width output-grid" style="margin-top: 20px;">
                     <div class="output-area">
                         <div class="output-header"><h3>Name đã chuẩn hoá</h3><div class="button-group"><button class="secondary" onclick="copyToClipboard('stdOutputName')">Copy</button><button class="secondary" onclick="downloadAsFile('stdOutputName', 'name_std.txt')">Tải về</button></div></div>
-                        <textarea id="stdOutputName" placeholder="Kết quả Name đã chuẩn hoá..."></textarea>
+                        <textarea id="stdOutputName" placeholder="Hiển thị một phần kết quả..."></textarea>
                     </div>
                     <div class="output-area">
                         <div class="output-header"><h3>VP đã chuẩn hoá</h3><div class="button-group"><button class="secondary" onclick="copyToClipboard('stdOutputVp')">Copy</button><button class="secondary" onclick="downloadAsFile('stdOutputVp', 'vp_std.txt')">Tải về</button></div></div>
-                        <textarea id="stdOutputVp" placeholder="Kết quả VP đã chuẩn hoá..."></textarea>
+                        <textarea id="stdOutputVp" placeholder="Hiển thị một phần kết quả..."></textarea>
                     </div>
                     <div class="output-area">
                         <div class="output-header"><h3>Rule đã chuẩn hoá</h3><div class="button-group"><button class="secondary" onclick="copyToClipboard('stdOutputRule')">Copy</button><button class="secondary" onclick="downloadAsFile('stdOutputRule', 'rule_std.txt')">Tải về</button></div></div>
-                        <textarea id="stdOutputRule" placeholder="Kết quả Rule đã chuẩn hoá..."></textarea>
+                        <textarea id="stdOutputRule" placeholder="Hiển thị một phần kết quả..."></textarea>
                     </div>
                 </div>
             </details>
@@ -355,18 +374,19 @@
         const outputVp = document.getElementById('outputVp');
         const outputRule = document.getElementById('outputRule');
         
-        // Auto-Standardizer Elements
+        // Standardizer Elements
         const runGeneratedStandardizerBtn = document.getElementById('runGeneratedStandardizerBtn');
         const stdOutputName = document.getElementById('stdOutputName');
         const stdOutputVp = document.getElementById('stdOutputVp');
         const stdOutputRule = document.getElementById('stdOutputRule');
+        const removeSpecialCharsToggle = document.getElementById('standardizer-remove-special-chars');
 
 
         // --- State Variables ---
         let filesToProcess = [];
         let isProcessing = false;
         
-        const DEFAULT_PROMPT = `Mục tiêu: Phân tích văn bản tiếng Trung, trích xuất và dịch các thành phần cụ thể theo yêu cầu.\n\nYêu cầu chi tiết:\n\n1.  **Nhiệm vụ Phân tích**: Từ văn bản đầu vào, thực hiện ba nhiệm vụ sau:\n    *   **Nhiệm vụ 1: Dịch Tên**: Tìm tất cả tên riêng (tên người, địa danh, môn phái, công pháp, chiêu thức), tên chung và dịch chúng sang Hán Việt.\n    *   **Nhiệm vụ 2: Dịch Cụm Từ (Viet Phrase)**: Tìm các cụm từ hoặc cấu trúc câu phổ biến, không quá 6 ký tự và dịch sang tiếng Việt tự nhiên, dễ hiểu, giữ văn phong cổ trang.\n    *   **Nhiệm vụ 3: Tạo Luật Nhân**: Tìm các cấu trúc có chứa số hoặc danh từ có thể thay thế, không quá 6 ký tự để tạo ra quy tắc chung, sử dụng placeholder {0}, {1}.\n\n2.  **Định dạng đầu ra BẮT BUỘC**:\n    *   Kết quả phải là văn bản thuần túy, KHÔNG được chứa markdown hay bất kỳ lời giải thích nào.\n    *   Nội dung phải được chia thành BA phần, kết quả dịch chỉ sử dụng ký tự in hoa hợp lý với tên, không sử dụng ký tự in hoa với vp và luật , bắt đầu bằng các tiêu đề: "- tên:", "- việt phrase:", "- luật nhân:".\n    *   Mỗi mục trong các phần phải theo định dạng \`Tiếng Trung=Tiếng Việt\`.\n\n**QUY TẮC TUYỆT ĐỐI**: Chỉ được trả về kết quả theo đúng định dạng đã yêu cầu, không có markdown.`;
+        const DEFAULT_PROMPT = `Mục tiêu: Phân tích văn bản tiếng Trung, trích xuất và dịch các thành phần cụ thể theo yêu cầu.\n\nYêu cầu chi tiết:\n\n1.  **Nhiệm vụ Phân tích**: Từ văn bản đầu vào, thực hiện ba nhiệm vụ sau:\n    *   **Nhiệm vụ 1: Dịch Tên**: Tìm tất cả tên riêng (tên người, địa danh, môn phái, công pháp, chiêu thức), danh từ chung và dịch chúng sang Hán Việt.\n    *   **Nhiệm vụ 2: Dịch Cụm Từ (Viet Phrase)**: Tìm các cụm từ hoặc cấu trúc câu phổ biến (không quá 6 ký tự) và dịch sang tiếng Việt tự nhiên, dễ hiểu, giữ văn phong cổ trang.\n    *   **Nhiệm vụ 3: Tạo Luật Nhân**: Tìm các cấu trúc có chứa số hoặc danh từ có thể thay thế (cấu trúc đó không quá 6 ký tự) để tạo ra quy tắc chung, sử dụng placeholder {0}, {1}.\n\n2.  **Định dạng đầu ra BẮT BUỘC**:\n    *   Kết quả phải là văn bản thuần túy, KHÔNG được chứa markdown hay bất kỳ lời giải thích nào.\n    *   Nội dung phải được chia thành BA phần, bắt đầu bằng các tiêu đề: "- tên:", "- việt phrase:", "- luật nhân:". kết quả dịch chỉ sử dụng ký tự in hoa hợp lý với tên riêng, không sử dụng ký tự in hoa với danh từ chung, Viet Phrase và Luật Nhân.\n    *   Mỗi mục trong các phần phải theo định dạng \`Tiếng Trung=Tiếng Việt\`.\n\n**QUY TẮC TUYỆT ĐỐI**: Chỉ được trả về kết quả theo đúng định dạng đã yêu cầu, không có markdown.`;
 
         // --- Event Listeners ---
         document.addEventListener('DOMContentLoaded', loadState);
@@ -429,15 +449,19 @@
             outputVp.value = '';
             outputRule.value = '';
             fileInputGemini.value = '';
-            stdOutputName.value = '';
-            stdOutputVp.value = '';
-            stdOutputRule.value = '';
+
+            // Clear generated standardizer results
+            stdOutputName.value = ''; stdOutputName.fullContent = '';
+            stdOutputVp.value = '';   stdOutputVp.fullContent = '';
+            stdOutputRule.value = ''; stdOutputRule.fullContent = '';
             
-            // Clear manual standardizers as well
+            // Clear manual standardizers
             ['name', 'vp', 'rule'].forEach(type => {
                 const container = document.getElementById(`standardizer-${type}`);
                 container.querySelector('textarea:first-of-type').value = '';
-                container.querySelector('textarea:last-of-type').value = '';
+                const outputTextarea = container.querySelector('textarea:last-of-type');
+                outputTextarea.value = '';
+                outputTextarea.fullContent = '';
                 container.querySelector('.file-list').innerHTML = '';
                 container.fileData = [];
             });
@@ -533,12 +557,12 @@
         async function callGeminiAPI(content, apiKeys, prompt, keyIndex = 0) {
             if (keyIndex >= apiKeys.length) { throw new Error("Tất cả API Key đều đã thất bại."); }
             const apiKey = apiKeys[keyIndex];
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite-preview-06-17:generateContent?key=${apiKey}`;
             const full_prompt = `${prompt}\n\n---\n\n${content}`;
             
             const body = {
                 "contents": [{ "parts": [{ "text": full_prompt }] }],
-                "generationConfig": { "temperature": 0.4, "topK": 1, "topP": 1, "maxOutputTokens": 65536 },
+                "generationConfig": { "temperature": 0.4, "topK": 1, "topP": 1, "maxOutputTokens": 64000 },
                 "safetySettings": [ { "category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE" }, { "category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE" }, { "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE" }, { "category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE" } ]
             };
 
@@ -579,7 +603,7 @@
                     else if(current.marker === ruleMarker) ruleContent = content;
                 }
             } else {
-                 nameContent = geminiText; // Fallback if no markers found
+                 nameContent = geminiText;
             }
 
             if (nameContent) outputName.value += (outputName.value ? separator : '') + nameContent;
@@ -587,45 +611,81 @@
             if (ruleContent) outputRule.value += (outputRule.value ? separator : '') + ruleContent;
         }
 
-        // --- Standardizer Logic ---
-        function standardizeText(text) {
-            if (!text.trim()) return '';
+        // ================================================================
+        // === LOGIC CHUẨN HÓA MỚI - TÍCH HỢP TỪ FILE VP.HTML ===
+        // ================================================================
 
+        const VIETNAMESE_CHARS = 'àáâãèéêìíòóôõùúăđĩũơưạảấầẩẫậắằẳẵặẹẻẽếềểễệỉịọỏốồổỗộớờởỡợụủứừửữựỳýỵỷỹ';
+        const ALLOWED_CHARS_REGEX = new RegExp(`^[\u4E00-\u9FFFa-zA-Z0-9=\\s${VIETNAMESE_CHARS}${VIETNAMESE_CHARS.toUpperCase()}]+$`);
+
+        function containsChinese(text) { return /[\u4E00-\u9FFF]/.test(text); }
+        function containsSpecialChars(text) { return !ALLOWED_CHARS_REGEX.test(text); }
+        function isUpperCaseChar(char) { return char.toLowerCase() !== char && char.toUpperCase() === char; }
+        function isTitleCase(text) {
+            const words = text.trim().split(/\s+/);
+            if (!words[0]) return true;
+            return words.every(word => word.length === 0 || isUpperCaseChar(word[0]));
+        }
+
+        function advancedStandardizeText(inputText, options) {
+            if (!inputText || !inputText.trim()) return '';
+            
             const uniqueEntries = new Map();
-            const lines = text.split('\n');
-
-            for (const line of lines) {
+            const allLines = inputText.split('\n');
+            for (const line of allLines) {
                 const trimmedLine = line.trim();
                 if (!trimmedLine || trimmedLine.startsWith('---')) continue;
-
                 const separatorIndex = trimmedLine.indexOf('=');
                 if (separatorIndex === -1) continue;
-
-                const chineseKey = trimmedLine.substring(0, separatorIndex).trim();
-                const vietnameseValue = trimmedLine.substring(separatorIndex + 1).trim();
-
-                if (chineseKey && !uniqueEntries.has(chineseKey)) {
-                    uniqueEntries.set(chineseKey, vietnameseValue);
+                const key = trimmedLine.substring(0, separatorIndex).trim();
+                const value = trimmedLine.substring(separatorIndex + 1).trim();
+                if (key && !uniqueEntries.has(key)) {
+                    uniqueEntries.set(key, value);
                 }
             }
 
             const resultLines = [];
-            uniqueEntries.forEach((value, key) => {
-                resultLines.push(`${key}=${value}`);
-            });
-
+            for (const [key, value] of uniqueEntries.entries()) {
+                const currentLine = `${key}=${value}`;
+                if (!containsChinese(currentLine)) continue;
+                if (options.removeSpecialChars && containsSpecialChars(currentLine)) continue;
+                
+                if (isTitleCase(value)) {
+                    resultLines.push(currentLine);
+                } else {
+                    resultLines.push(`${key}=${value.toLowerCase()}`);
+                }
+            }
             return resultLines.join('\n');
+        }
+
+        function createContentPreview(fullContent, maxLines = 200) {
+            if (!fullContent) return 'Không có nội dung.';
+            const lines = fullContent.split('\n');
+            if (lines.length <= maxLines) return fullContent;
+            
+            const preview = lines.slice(0, maxLines).join('\n');
+            return `${preview}\n\n--- (Hiển thị ${maxLines} trên tổng số ${lines.length} dòng) ---`;
         }
 
         function handleGeneratedStandardize() {
             if (!outputName.value && !outputVp.value && !outputRule.value) {
-                alert('Chưa có dữ liệu nào được tạo từ Gemini để chuẩn hoá. Vui lòng chạy xử lý trước.');
+                alert('Chưa có dữ liệu nào được tạo từ Gemini để chuẩn hoá.');
                 return;
             }
+             const options = { removeSpecialChars: removeSpecialCharsToggle.checked };
 
-            stdOutputName.value = standardizeText(outputName.value);
-            stdOutputVp.value = standardizeText(outputVp.value);
-            stdOutputRule.value = standardizeText(outputRule.value);
+            const fullResultName = advancedStandardizeText(outputName.value, options);
+            stdOutputName.fullContent = fullResultName;
+            stdOutputName.value = createContentPreview(fullResultName);
+
+            const fullResultVp = advancedStandardizeText(outputVp.value, options);
+            stdOutputVp.fullContent = fullResultVp;
+            stdOutputVp.value = createContentPreview(fullResultVp);
+
+            const fullResultRule = advancedStandardizeText(outputRule.value, options);
+            stdOutputRule.fullContent = fullResultRule;
+            stdOutputRule.value = createContentPreview(fullResultRule);
 
             alert('Đã chuẩn hoá xong dữ liệu từ Gemini!');
         }
@@ -641,17 +701,13 @@
             const copyBtn = container.querySelector('.output-header .button-group button:first-child');
             const downloadBtn = container.querySelector('.output-header .button-group button:last-child');
             
-            container.fileData = []; // Store files specific to this instance
+            container.fileData = [];
 
             dropZone.addEventListener('click', () => fileInput.click());
             dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
             dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-            dropZone.addEventListener('drop', (e) => {
-                e.preventDefault();
-                dropZone.classList.remove('dragover');
-                handleFiles(e.dataTransfer.files);
-            });
-            fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+            dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); handleFiles(e.dataTransfer.files); });
+            fileInput.addEventListener('change', (e) => { handleFiles(e.target.files); e.target.value = ''; });
 
             function handleFiles(newFiles) {
                 for (const file of newFiles) {
@@ -677,11 +733,14 @@
                     try {
                         const fileContent = await readFileAsText(fileData.file);
                         combinedText += "\n" + fileContent;
-                    } catch (error) {
-                        alert(`Lỗi đọc file ${fileData.name}`);
-                    }
+                    } catch (error) { alert(`Lỗi đọc file ${fileData.name}`); }
                 }
-                outputTextArea.value = standardizeText(combinedText);
+
+                const options = { removeSpecialChars: removeSpecialCharsToggle.checked };
+                const fullResult = advancedStandardizeText(combinedText, options);
+
+                outputTextArea.fullContent = fullResult;
+                outputTextArea.value = createContentPreview(fullResult);
                 alert(`Đã chuẩn hoá xong ${type.toUpperCase()}!`);
             });
 
@@ -689,17 +748,26 @@
             downloadBtn.addEventListener('click', () => downloadAsFile(outputTextArea, `${type}_manual_std.txt`));
         }
 
-        // --- Utility Functions ---
+        // --- Utility Functions (Updated) ---
         function copyToClipboard(element) {
             const textarea = (typeof element === 'string') ? document.getElementById(element) : element;
-            textarea.select();
+            const contentToCopy = textarea.fullContent !== undefined ? textarea.fullContent : textarea.value;
+
+            const tempTextarea = document.createElement('textarea');
+            tempTextarea.value = contentToCopy;
+            document.body.appendChild(tempTextarea);
+            tempTextarea.select();
             document.execCommand('copy');
+            document.body.removeChild(tempTextarea);
+
             alert('Đã copy nội dung!');
         }
 
         function downloadAsFile(element, filename) {
             const textarea = (typeof element === 'string') ? document.getElementById(element) : element;
-            const blob = new Blob([textarea.value], { type: 'text/plain;charset=utf-8' });
+            const contentToDownload = textarea.fullContent !== undefined ? textarea.fullContent : textarea.value;
+
+            const blob = new Blob([contentToDownload], { type: 'text/plain;charset=utf-8' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
             link.download = filename;
