@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Công cụ Lọc và Xử lý File Text (Logic Ưu tiên)</title>
+    <title>Công cụ Lọc và Xử lý File Text (Sửa lỗi Regex)</title>
     <style>
-         :root {
+        :root {
             --primary-color: #007bff;
             --secondary-color: #f8f9fa;
             --border-color: #dee2e6;
@@ -71,7 +71,11 @@
                 <div class="control-group"><input type="checkbox" id="f-no-chinese"><label for="f-no-chinese">Những dòng <strong>không</strong> chứa ký tự tiếng Trung</label></div>
                 <div class="control-group"><input type="checkbox" id="f-n-chinese"><label for="f-n-chinese">Những dòng chỉ chứa</label><input type="number" id="f-n-chinese-count" value="1" min="0"><label for="f-n-chinese-count">ký tự tiếng Trung</label></div>
                 <div class="control-group"><input type="checkbox" id="f-cn-en-only"><label for="f-cn-en-only">Những dòng chỉ chứa ký tự tiếng Trung, tiếng Anh (a-z, A-Z) và dấu '='</label></div>
-                <div class="control-group"><input type="checkbox" id="f-special-chars"><label for="f-special-chars">Những dòng có chứa ký tự đặc biệt (loại trừ: chữ cái, số, ký tự Trung, khoảng trắng, <code>= { }</code>)</label></div>
+                <div class="control-group">
+                    <input type="checkbox" id="f-special-chars">
+                    <!-- ===== CẬP NHẬT MÔ TẢ ===== -->
+                    <label for="f-special-chars">Những dòng có chứa ký tự đặc biệt (loại trừ: chữ cái, số, khoảng trắng, <code>= { } ,</code>)</label>
+                </div>
                 <div class="control-group"><input type="checkbox" id="f-custom-special-chars"><label for="f-custom-special-chars">Những dòng có chứa các ký tự đặc biệt sau:</label><textarea id="f-custom-special-chars-list" placeholder="Nhập mỗi ký tự trên một dòng..."></textarea></div>
                 <div class="control-group"><input type="checkbox" id="f-regex"><label for="f-regex">Những dòng khớp với Regex:</label><input type="text" id="f-regex-pattern" placeholder="Nhập biểu thức chính quy (regex) tại đây"></div>
                 <!-- Nhóm Giữ lại dòng đầu -->
@@ -211,21 +215,21 @@
             const CHINESE_REGEX = /[\u4e00-\u9fa5]/;
             const CHINESE_ONLY_REGEX = /[\u4e00-\u9fa5]/g;
             const CN_EN_ONLY_REGEX = /^[a-zA-Z\u4e00-\u9fa5\s=]*$/;
-            const SPECIAL_CHARS_REGEX = /[^a-zA-Z0-9\u4e00-\u9fa5\s={}]/;
+            // ===== SỬA LỖI REGEX TẠI ĐÂY =====
+            const SPECIAL_CHARS_REGEX = /[^\p{L}\p{N}\s={},]/u;
+
             let userRegex = null;
             if (options.regex && options.regexPattern) {
-                try { userRegex = new RegExp(options.regexPattern); } catch (e) {
+                try { userRegex = new RegExp(options.regexPattern, 'u'); } catch (e) { // Thêm cờ 'u' cho Regex người dùng
                     alert(`Lỗi Regex không hợp lệ: ${e.message}`); return;
                 }
             }
             const keptItems = { pre: new Set(), post: new Set(), line: new Set() };
 
-            // ===== LOGIC LỌC ƯU TIÊN MỚI =====
             for (const line of lines) {
                 const trimmedLine = line.trim();
                 if (trimmedLine === '') { unmatchedLines.push(line); continue; }
 
-                // --- Giai đoạn 1: Kiểm tra các tiêu chí "Xoá Hết" ---
                 let isHardMatch = false;
                 if (options.noChinese && !CHINESE_REGEX.test(line)) isHardMatch = true;
                 else if (options.nChinese && (line.match(CHINESE_ONLY_REGEX) || []).length === options.nChineseCount) isHardMatch = true;
@@ -236,10 +240,9 @@
 
                 if (isHardMatch) {
                     matchedLines.push(line);
-                    continue; // Dòng này bị loại, chuyển sang dòng tiếp theo ngay lập tức
+                    continue; 
                 }
                 
-                // --- Giai đoạn 2: Chỉ những dòng "sạch" mới được xét duyệt trùng lặp ---
                 let isDuplicateCopy = false;
                 const parts = trimmedLine.split('=');
                 const prePart = (parts[0] || '').trim();
