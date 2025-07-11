@@ -495,10 +495,10 @@
         async function callGeminiAPI(content, apiKeys, prompt, keyIndex = 0) {
             if (keyIndex >= apiKeys.length) { throw new Error("Tất cả API Key đều đã thất bại."); }
             const apiKey = apiKeys[keyIndex];
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite-preview-06-17:generateContent?key=${apiKey}`;
             const body = {
                 "contents": [{ "parts": [{ "text": `${prompt}\n\n---\n\n${content}` }] }],
-                "generationConfig": { "temperature": 0.5, "topK": 1, "topP": 1, "maxOutputTokens": 65536 },
+                "generationConfig": { "temperature": 0.5, "topK": 1, "topP": 1, "maxOutputTokens": 64000 },
                 "safetySettings": [ { "category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE" }, { "category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE" }, { "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE" }, { "category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE" } ]
             };
             try {
