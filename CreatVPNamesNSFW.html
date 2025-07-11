@@ -348,7 +348,50 @@
         // --- State Variables ---
         let chunksToProcess = [];
         let isProcessing = false;
-        const DEFAULT_PROMPT = `Mục tiêu: Phân tích văn bản tiếng Trung, trích xuất và dịch các thành phần cụ thể theo yêu cầu.\n\nYêu cầu chi tiết:\n\n1.  **Nhiệm vụ Phân tích**: Từ văn bản đầu vào, thực hiện ba nhiệm vụ sau:\n    *   **Nhiệm vụ 1: Dịch Tên**: Tìm tất cả tên riêng (tên người, địa danh, môn phái, công pháp, chiêu thức), danh từ chung và dịch chúng sang Hán Việt.\n    *   **Nhiệm vụ 2: Dịch Cụm Từ (Viet Phrase)**: Tìm các cụm từ hoặc cấu trúc câu phổ biến (không quá 6 ký tự) và dịch sang tiếng Việt tự nhiên, dễ hiểu, giữ văn phong cổ trang.\n    *   **Nhiệm vụ 3: Tạo Luật Nhân**: Tìm các cấu trúc có chứa số hoặc danh từ có thể thay thế (cấu trúc đó không quá 6 ký tự) để tạo ra quy tắc chung, sử dụng placeholder {0}, {1}.\n\n2.  **Định dạng đầu ra BẮT BUỘC**:\n    *   Kết quả phải là văn bản thuần túy, KHÔNG được chứa markdown hay bất kỳ lời giải thích nào.\n    *   Nội dung phải được chia thành BA phần, bắt đầu bằng các tiêu đề: "- tên:", "- việt phrase:", "- luật nhân:". kết quả dịch chỉ sử dụng ký tự in hoa hợp lý với tên riêng, không sử dụng ký tự in hoa với danh từ chung, Viet Phrase và Luật Nhân.\n    *   Mỗi mục trong các phần phải theo định dạng \`Tiếng Trung=Tiếng Việt\`.\n\n**QUY TẮC TUYỆT ĐỐI**: Chỉ được trả về kết quả theo đúng định dạng đã yêu cầu, không có markdown.`;
+        const DEFAULT_PROMPT = `Bạn là một AI chuyên gia về dịch thuật và xử lý ngôn ngữ, được huấn luyện để phân tích văn bản truyện tiên hiệp, kiếm hiệp, huyền huyễn.
+Mục tiêu: Phân tích văn bản tiếng Trung được cung cấp, sau đó trích xuất, phân loại và dịch các thành phần theo các quy tắc nghiêm ngặt dưới đây.
+Bước 1: Hiểu rõ các loại dữ liệu cần trích xuất
+Bạn phải phân loại các từ/cụm từ tiếng Trung tìm được vào BA nhóm sau đây, dựa trên ĐỊNH NGHĨA, YÊU CẦU CỦA TÔI và VÍ DỤ:
+Nhóm 1: tên
+ĐỊNH NGHĨA: Bao gồm tên riêng (người, địa danh, môn phái, công pháp, vũ khí) và các danh từ chung ĐƠN LẺ hoặc cụm danh từ CỐ ĐỊNH.
+YÊU CẦU CỦA TÔI: Chúng được dịch trực tiếp sang Hán Việt hoặc một từ/cụm từ tiếng Việt tương đương và KHÔNG chứa các placeholder như {0}, {1}.
+VÍ DỤ: 李洛=Lý Lạc, 学府=Học phủ, 外套=ngoại sáo, 万相之王=Vạn Tượng Chi Vương.
+Nhóm 2: việt phrase
+ĐỊNH NGHĨA: Là các cụm từ, thành ngữ, hoặc động từ có số lượng chữ Tiếng Trung nhỏ hơn hoặc bằng 6, thể hiện hành động, trạng thái. Chúng thường là các cụm từ cố định trong văn nói hoặc văn viết. YÊU CẦU CỦA TÔI: Chúng được dịch sang một cụm từ tiếng Việt tự nhiên, dễ hiểu cho người đọc và KHÔNG chứa các placeholder như {0}, {1}.
+VÍ DỤ: 心头一动=trong lòng khẽ động, 咬牙切齿=nghiến răng nghiến lợi, 沉声说道=trầm giọng nói.
+Nhóm 3: luật nhân
+ĐỊNH NGHĨA: Là các mẫu câu hoặc cấu trúc có chứa các thành phần có thể thay thế (như tên người, đối tượng, số lượng), BẮT BUỘC phải có số lượng chữ tiếng Trung NHỎ HƠN 10. YÊU CẦU CỦA TÔI: Chúng phải được dịch dễ hiểu cho người đọc. Bạn cần khái quát hóa chúng bằng cách sử dụng các placeholder {0}, {1}, {2} để thay thế cho các thành phần có thể thay thế đó. KHÔNG tạo luật với các mẫu câu hoặc cấu trúc có số lượng chữ tiếng Trung LỚN HƠN hoặc BẰNG 10. KHÔNG tạo luật mà không sử dụng placeholder.
+VÍ DỤ về cách tạo:
+Nếu trong văn bản có câu 向李洛拱了拱手 (chắp tay với Lý Lạc), bạn cần nhận diện "Lý Lạc" là tên người, cũng là đối tượng, là một thành phần có thể thay thế và tạo ra luật: 向{0}拱了拱手=chắp tay với {0}.
+Nếu có câu 一阶相师 (nhất giai Tướng Sư), bạn cần nhận diện "nhất" là số lượng và "Tướng Sư" là đối tượng, chúng là những thành phần có thể thay thế và tạo ra luật: {0}阶{1}={0} giai {1}.
+Nếu có câu 一双明眸 (một đôi mắt sáng), bạn cần nhận diện "một" là số lượng và "mắt" là đối tượng, chúng là một thành phần có thể thay thế và tạo ra luật: {0}双{0}={0} đôi {1} sáng.
+Nếu có câu 却见芸芸众生,筑基真人,全部面容呆滞,口中齐声发出了一声感叹(lại thấy chúng sinh, Trúc Cơ Chân Nhân, tất cả đều mặt mày ngây dại, đồng thanh phát ra một tiếng cảm thán), bạn sẽ KHÔNG tạo luật bởi vì số lượng chữ Tiếng Trung của nó là 27 lớn hơn 10. 
+Bước 2: Thực hiện và định dạng đầu ra
+Phân tích văn bản đầu vào, trích xuất và phân loại theo 3 nhóm trên. Sau đó, trình bày kết quả theo định dạng BẮT BUỘC sau đây:
+Định dạng tổng thể: Chỉ trả về văn bản thuần túy (plain text).
+Tiêu đề các phần: Phải bắt đầu bằng 3 tiêu đề chính xác:
+"- tên:"
+"- việt phrase:"
+"- luật nhân:"
+Định dạng mỗi mục: Mỗi mục trong các phần phải theo cấu trúc Tiếng Trung=Tiếng Việt.
+VÍ DỤ:
+- tên:
+六牙白象=Lục Nha Bạch Tượng
+菩提树=Bồ Đề Thụ
+佛光=Phật Quang
+鬼哭神嚎=Quỷ Khóc Thần Hào
+- việt phrase:
+难以言喻=khó mà diễn tả
+消弥无形=tiêu tan vô hình
+望向自己=nhìn về phía mình
+- luật nhân:
+以至于{0}都愣住了=khiến cho {0} cũng ngây người ra
+在{0}之中=trong {0}
+包括{0}在内=bao gồm cả {0}
+Quy tắc viết hoa:
+Trong phần - tên:, VIẾT HOA chữ cái đầu của các âm tiết trong tên riêng (ví dụ: Lý Lạc, Vạn Tượng Chi Vương). Viết thường các danh từ chung (ví dụ: ngoại sáo).
+Trong phần - việt phrase: và - luật nhân:, viết thường toàn bộ kết quả dịch tiếng Việt.
+QUY TẮC TỐI THƯỢNG: KHÔNG được giải thích, KHÔNG thêm ghi chú. Chỉ và chỉ trả về ba khối dữ liệu theo đúng định dạng.`;
 
         // --- Event Listeners ---
         document.addEventListener('DOMContentLoaded', loadState);
@@ -495,10 +538,10 @@
         async function callGeminiAPI(content, apiKeys, prompt, keyIndex = 0) {
             if (keyIndex >= apiKeys.length) { throw new Error("Tất cả API Key đều đã thất bại."); }
             const apiKey = apiKeys[keyIndex];
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite-preview-06-17:generateContent?key=${apiKey}`;
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
             const body = {
                 "contents": [{ "parts": [{ "text": `${prompt}\n\n---\n\n${content}` }] }],
-                "generationConfig": { "temperature": 0.5, "topK": 1, "topP": 1, "maxOutputTokens": 64000 },
+                "generationConfig": { "temperature": 1, "topK": 1, "topP": 0.9, "maxOutputTokens": 65536 },
                 "safetySettings": [ { "category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE" }, { "category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE" }, { "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE" }, { "category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE" } ]
             };
             try {
