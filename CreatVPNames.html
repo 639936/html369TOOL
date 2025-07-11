@@ -553,7 +553,7 @@ QUY TẮC TỐI THƯỢNG: KHÔNG được giải thích, KHÔNG thêm ghi chú.
         }
 
         // --- Core Gemini Processing Logic ---
-        async function startProcessing(resumeOnly) {
+                async function startProcessing(resumeOnly) {
             if (isProcessing) { alert('Đang trong quá trình xử lý, vui lòng đợi...'); return; }
             const apiKeys = apiKeysInput.value.trim().split('\n').filter(k => k);
             if (apiKeys.length === 0) { alert('Vui lòng nhập ít nhất một API Key.'); return; }
@@ -588,6 +588,15 @@ QUY TẮC TỐI THƯỢNG: KHÔNG được giải thích, KHÔNG thêm ghi chú.
                 }
                 updateFileListGeminiUI();
                 updateProgressCounter();
+
+                // --- BẮT ĐẦU ĐOẠN CODE ĐƯỢC THÊM ---
+                // Kiểm tra nếu đây không phải là file cuối cùng trong hàng đợi
+                if (queue.indexOf(fileData) < queue.length - 1) {
+                    console.log(`Đã xử lý file "${fileData.name}". Chờ 10 giây trước khi xử lý file tiếp theo...`);
+                    // Chờ 10 giây (10000 mili giây)
+                    await new Promise(resolve => setTimeout(resolve, 30000));
+                }
+                // --- KẾT THÚC ĐOẠN CODE ĐƯỢC THÊM ---
             }
 
             isProcessing = false;

@@ -604,6 +604,10 @@ QUY TẮC TỐI THƯỢNG: KHÔNG được giải thích, KHÔNG thêm ghi chú.
                     chunkData.status = 'failed';
                 }
                 updateChunkListUI(); updateProgressCounter();
+                if (queue.indexOf(chunkData) < queue.length - 1) {
+                    console.log(`Đã xử lý ${chunkData.id}. Chờ 10 giây...`);
+                    await new Promise(resolve => setTimeout(resolve, 30000));
+                }
             }
             isProcessing = false; startBtn.disabled = false; resumeBtn.disabled = false;
             saveState(); alert('Đã xử lý xong!');
