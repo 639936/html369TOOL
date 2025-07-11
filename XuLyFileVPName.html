@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Công cụ Lọc và Xử lý File Text (Logic Ưu tiên)</title>
+    <style>
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #f8f9fa;
+            --border-color: #dee2e6;
+            --text-color: #212529;
+            --bg-color: #ffffff;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --info-color: #17a2b8;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--secondary-color);
+            color: var(--text-color);
+        }
+        .container { max-width: 1200px; margin: auto; background: var(--bg-color); padding: 25px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        h1 { text-align: center; color: var(--primary-color); margin-bottom: 25px; }
+        fieldset { border: 1px solid var(--border-color); border-radius: 5px; padding: 15px; margin-bottom: 20px; }
+        legend { font-weight: bold; color: var(--primary-color); padding: 0 10px; }
+        .control-group { display: flex; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+        .control-group label { margin-left: 8px; flex-grow: 1; }
+        .control-group input[type="checkbox"], .control-group input[type="radio"] { margin-right: 5px; }
+        .control-group input[type="number"], .control-group input[type="text"], .control-group textarea { margin-left: 10px; padding: 5px 8px; border: 1px solid var(--border-color); border-radius: 4px; }
+        .control-group input[type="number"] { width: 60px; }
+        .control-group input[type="text"] { flex-grow: 1; min-width: 200px; }
+        .control-group textarea { width: 250px; height: 80px; font-family: monospace; font-size: 12px; }
+        #main-button { display: block; width: 100%; padding: 12px; font-size: 18px; font-weight: bold; color: var(--bg-color); background-color: var(--primary-color); border: none; border-radius: 5px; cursor: pointer; transition: background-color 0.3s; }
+        #main-button:hover { background-color: #0056b3; }
+        #main-button:disabled { background-color: #a0c7f0; cursor: not-allowed; }
+        #results-container { margin-top: 30px; border-top: 2px solid var(--border-color); padding-top: 20px; }
+        .result-item { background-color: var(--secondary-color); border: 1px solid var(--border-color); border-radius: 5px; padding: 15px; margin-bottom: 20px; }
+        .result-item.analysis-box { border-left: 4px solid var(--info-color); }
+        .result-item h3 { margin-top: 0; color: #333; border-bottom: 1px solid #ccc; padding-bottom: 10px; }
+        .result-item.analysis-box h3 { color: var(--info-color); }
+        .result-item textarea { width: 100%; height: 200px; box-sizing: border-box; border: 1px solid var(--border-color); border-radius: 4px; padding: 10px; font-family: monospace; font-size: 13px; resize: vertical; }
+        .download-btn { display: inline-block; margin-top: 10px; padding: 8px 15px; background-color: var(--success-color); color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .download-btn:hover { background-color: #218838; }
+        .info-status { text-align: center; margin-top: 15px; font-style: italic; color: #6c757d; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Công cụ Lọc và Xử lý File Text</h1>
+        <div id="controls">
+            <!-- Khu vực chọn file và gộp file -->
+            <fieldset id="file-selection">
+                <legend>1. Chọn File(s)</legend>
+                <input type="file" id="file-input" multiple accept=".txt, .glos">
+                <p class="info-status" id="file-status">Chưa có file nào được chọn.</p>
+            </fieldset>
+            <div class="control-group" style="padding: 0 15px 15px 15px; border-bottom: 1px solid var(--border-color); margin-bottom: 20px;">
+                <input type="checkbox" id="merge-files-checkbox">
+                <label for="merge-files-checkbox"><strong>Gộp các files đã chọn thành một để xử lý</strong></label>
+            </div>
+
+            <!-- Khu vực lọc -->
+            <fieldset id="filter-options">
+                <legend>2. Chọn Tiêu chí Lọc</legend>
+                <!-- Nhóm Xóa Hết -->
+                <div class="control-group"><input type="checkbox" id="f-no-chinese"><label for="f-no-chinese">Những dòng <strong>không</strong> chứa ký tự tiếng Trung</label></div>
+                <div class="control-group"><input type="checkbox" id="f-n-chinese"><label for="f-n-chinese">Những dòng chỉ chứa</label><input type="number" id="f-n-chinese-count" value="1" min="0"><label for="f-n-chinese-count">ký tự tiếng Trung</label></div>
+                <div class="control-group"><input type="checkbox" id="f-cn-en-only"><label for="f-cn-en-only">Những dòng chỉ chứa ký tự tiếng Trung, tiếng Anh (a-z, A-Z) và dấu '='</label></div>
+                <div class="control-group"><input type="checkbox" id="f-special-chars"><label for="f-special-chars">Những dòng có chứa ký tự đặc biệt (loại trừ: chữ cái, số, ký tự Trung, khoảng trắng, <code>= { }</code>)</label></div>
+                <div class="control-group"><input type="checkbox" id="f-custom-special-chars"><label for="f-custom-special-chars">Những dòng có chứa các ký tự đặc biệt sau:</label><textarea id="f-custom-special-chars-list" placeholder="Nhập mỗi ký tự trên một dòng..."></textarea></div>
+                <div class="control-group"><input type="checkbox" id="f-regex"><label for="f-regex">Những dòng khớp với Regex:</label><input type="text" id="f-regex-pattern" placeholder="Nhập biểu thức chính quy (regex) tại đây"></div>
+                <!-- Nhóm Giữ lại dòng đầu -->
+                <hr>
+                <div class="control-group"><input type="checkbox" id="f-duplicate-pre"><label for="f-duplicate-pre">Những dòng có cùng phần tiếng Trung (trước dấu '=') <small><em>(Giữ lại dòng đầu tiên)</em></small></label></div>
+                <div class="control-group"><input type="checkbox" id="f-duplicate-post"><label for="f-duplicate-post">Những dòng có cùng phần ký tự (sau dấu '=') <small><em>(Giữ lại dòng đầu tiên)</em></small></label></div>
+                <div class="control-group"><input type="checkbox" id="f-duplicate-lines"><label for="f-duplicate-lines">Những dòng có nội dung giống nhau hoàn toàn <small><em>(Giữ lại dòng đầu, có bảng phân tích riêng)</em></small></label></div>
+            </fieldset>
+
+            <!-- Khu vực hành động -->
+             <fieldset id="action-options">
+                <legend>3. Chọn Hành động</legend>
+                 <div class="control-group"><input type="radio" id="a-find" name="action" value="find" checked><label for="a-find"><strong>Tìm kiếm:</strong> Hiển thị các dòng khớp trong ô review bên dưới.</label></div>
+                 <div class="control-group"><input type="radio" id="a-delete" name="action" value="delete"><label for="a-delete"><strong>Xoá:</strong> Xoá các dòng khớp và tạo file mới với nội dung còn lại.</label></div>
+                 <div class="control-group"><input type="radio" id="a-extract" name="action" value="extract"><label for="a-extract"><strong>Tách:</strong> Tách các dòng khớp ra một file mới.</label></div>
+            </fieldset>
+            
+            <button id="main-button" disabled>Bắt đầu Xử lý</button>
+            <p id="processing-status" class="info-status"></p>
+        </div>
+
+        <div id="results-container">
+            <div id="duplicate-analysis-container"></div>
+            <div id="file-results-container"></div>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const fileInput = document.getElementById('file-input');
+        const fileStatus = document.getElementById('file-status');
+        const mainButton = document.getElementById('main-button');
+        const processingStatus = document.getElementById('processing-status');
+        const duplicateAnalysisContainer = document.getElementById('duplicate-analysis-container');
+        const fileResultsContainer = document.getElementById('file-results-container');
+        const filterCheckboxes = Array.from(document.querySelectorAll('#filter-options input[type="checkbox"]'));
+        const mergeFilesCheckbox = document.getElementById('merge-files-checkbox');
+
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) {
+                mainButton.disabled = false;
+                fileStatus.textContent = `${fileInput.files.length} file(s) đã được chọn.`;
+            } else {
+                mainButton.disabled = true;
+                fileStatus.textContent = 'Chưa có file nào được chọn.';
+            }
+        });
+        mainButton.addEventListener('click', handleProcessing);
+
+        async function handleProcessing() {
+            if (fileInput.files.length === 0) { alert('Vui lòng chọn ít nhất một file.'); return; }
+            if (!filterCheckboxes.some(cb => cb.checked)) {
+                processingStatus.textContent = 'Lỗi: Vui lòng chọn ít nhất một tiêu chí lọc.';
+                processingStatus.style.color = 'var(--danger-color)';
+                return;
+            }
+            mainButton.disabled = true;
+            processingStatus.textContent = 'Đang xử lý...';
+            processingStatus.style.color = 'var(--text-color)';
+            duplicateAnalysisContainer.innerHTML = '';
+            fileResultsContainer.innerHTML = '';
+
+            const mergeFiles = mergeFilesCheckbox.checked;
+
+            if (mergeFiles) {
+                processingStatus.textContent = `Đang đọc và gộp ${fileInput.files.length} files...`;
+                try {
+                    const readPromises = Array.from(fileInput.files).map(file => readFileAsText(file));
+                    const contentsArray = await Promise.all(readPromises);
+                    const combinedContent = contentsArray.join('\n');
+                    const combinedFileName = `gop_tu_${fileInput.files.length}_files.txt`;
+                    processingStatus.textContent = 'Đang xử lý file đã gộp...';
+                    processFile(combinedFileName, combinedContent);
+                } catch(error) { renderError('Lỗi khi gộp file', error); }
+            } else {
+                for (const file of fileInput.files) {
+                    try {
+                        const content = await readFileAsText(file);
+                        processFile(file.name, content);
+                    } catch (error) { renderError(file.name, error); }
+                }
+            }
+            mainButton.disabled = false;
+            processingStatus.textContent = 'Hoàn thành!';
+        }
+
+        function readFileAsText(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = event => resolve(event.target.result);
+                reader.onerror = error => reject(error);
+                reader.readAsText(file, 'UTF-8');
+            });
+        }
+        
+        function processFile(fileName, content) {
+            const lines = content.split(/\r?\n/);
+            const options = {
+                noChinese: document.getElementById('f-no-chinese').checked, nChinese: document.getElementById('f-n-chinese').checked,
+                nChineseCount: parseInt(document.getElementById('f-n-chinese-count').value, 10), cnEnOnly: document.getElementById('f-cn-en-only').checked,
+                specialChars: document.getElementById('f-special-chars').checked, customSpecialChars: document.getElementById('f-custom-special-chars').checked,
+                customSpecialCharsList: document.getElementById('f-custom-special-chars-list').value.split('\n').filter(c => c.trim() !== ''),
+                regex: document.getElementById('f-regex').checked, regexPattern: document.getElementById('f-regex-pattern').value,
+                duplicatePre: document.getElementById('f-duplicate-pre').checked, duplicatePost: document.getElementById('f-duplicate-post').checked,
+                duplicateLines: document.getElementById('f-duplicate-lines').checked,
+            };
+            
+            const duplicateCounts = { pre: {}, post: {}, line: {} };
+            if (options.duplicatePre || options.duplicatePost || options.duplicateLines) {
+                for (const line of lines) {
+                    const trimmedLine = line.trim();
+                    if (!trimmedLine) continue;
+                    if (options.duplicateLines) duplicateCounts.line[trimmedLine] = (duplicateCounts.line[trimmedLine] || 0) + 1;
+                    if (options.duplicatePre || options.duplicatePost) {
+                        const parts = trimmedLine.split('=');
+                        if (parts.length >= 2) {
+                            const pre = parts[0].trim();
+                            const post = parts.slice(1).join('=').trim();
+                            if (pre && options.duplicatePre) duplicateCounts.pre[pre] = (duplicateCounts.pre[pre] || 0) + 1;
+                            if (post && options.duplicatePost) duplicateCounts.post[post] = (duplicateCounts.post[post] || 0) + 1;
+                        }
+                    }
+                }
+            }
+            
+            if (options.duplicateLines) {
+                const duplicates = [];
+                for (const line in duplicateCounts.line) {
+                    if (duplicateCounts.line[line] > 1) {
+                        duplicates.push({ line, count: duplicateCounts.line[line] });
+                    }
+                }
+                if (duplicates.length > 0) renderDuplicateAnalysis(duplicates, fileName);
+            }
+
+            const matchedLines = []; const unmatchedLines = [];
+            const CHINESE_REGEX = /[\u4e00-\u9fa5]/;
+            const CHINESE_ONLY_REGEX = /[\u4e00-\u9fa5]/g;
+            const CN_EN_ONLY_REGEX = /^[a-zA-Z\u4e00-\u9fa5\s=]*$/;
+            const SPECIAL_CHARS_REGEX = /[^a-zA-Z0-9\u4e00-\u9fa5\s={}]/;
+            let userRegex = null;
+            if (options.regex && options.regexPattern) {
+                try { userRegex = new RegExp(options.regexPattern); } catch (e) {
+                    alert(`Lỗi Regex không hợp lệ: ${e.message}`); return;
+                }
+            }
+            const keptItems = { pre: new Set(), post: new Set(), line: new Set() };
+
+            // ===== LOGIC LỌC ƯU TIÊN MỚI =====
+            for (const line of lines) {
+                const trimmedLine = line.trim();
+                if (trimmedLine === '') { unmatchedLines.push(line); continue; }
+
+                // --- Giai đoạn 1: Kiểm tra các tiêu chí "Xoá Hết" ---
+                let isHardMatch = false;
+                if (options.noChinese && !CHINESE_REGEX.test(line)) isHardMatch = true;
+                else if (options.nChinese && (line.match(CHINESE_ONLY_REGEX) || []).length === options.nChineseCount) isHardMatch = true;
+                else if (options.cnEnOnly && CN_EN_ONLY_REGEX.test(line)) isHardMatch = true;
+                else if (options.specialChars && SPECIAL_CHARS_REGEX.test(line)) isHardMatch = true;
+                else if (options.customSpecialChars && options.customSpecialCharsList.length > 0 && options.customSpecialCharsList.some(char => line.includes(char))) isHardMatch = true;
+                else if (options.regex && userRegex && userRegex.test(line)) isHardMatch = true;
+
+                if (isHardMatch) {
+                    matchedLines.push(line);
+                    continue; // Dòng này bị loại, chuyển sang dòng tiếp theo ngay lập tức
+                }
+                
+                // --- Giai đoạn 2: Chỉ những dòng "sạch" mới được xét duyệt trùng lặp ---
+                let isDuplicateCopy = false;
+                const parts = trimmedLine.split('=');
+                const prePart = (parts[0] || '').trim();
+                const postPart = (parts.length > 1) ? parts.slice(1).join('=').trim() : '';
+
+                if (options.duplicateLines && duplicateCounts.line[trimmedLine] > 1) {
+                    if (keptItems.line.has(trimmedLine)) isDuplicateCopy = true; else keptItems.line.add(trimmedLine);
+                }
+                if (!isDuplicateCopy && options.duplicatePre && prePart && duplicateCounts.pre[prePart] > 1) {
+                    if (keptItems.pre.has(prePart)) isDuplicateCopy = true; else keptItems.pre.add(prePart);
+                }
+                if (!isDuplicateCopy && options.duplicatePost && postPart && duplicateCounts.post[postPart] > 1) {
+                    if (keptItems.post.has(postPart)) isDuplicateCopy = true; else keptItems.post.add(postPart);
+                }
+
+                if (isDuplicateCopy) {
+                    matchedLines.push(line);
+                } else {
+                    unmatchedLines.push(line);
+                }
+            }
+
+            const action = document.querySelector('input[name="action"]:checked').value;
+            let resultLines = [], resultTitlePrefix = '', downloadContent = '', newFileName = '';
+            switch(action) {
+                case 'find': resultLines = matchedLines; resultTitlePrefix = `Tìm thấy ${resultLines.length} dòng khớp`; downloadContent = null; break;
+                case 'delete': resultLines = unmatchedLines; resultTitlePrefix = `Kết quả sau khi xoá ${matchedLines.length} dòng khớp`; downloadContent = unmatchedLines.join('\n'); newFileName = `filtered_${fileName}`; break;
+                case 'extract': resultLines = matchedLines; resultTitlePrefix = `Kết quả tách ${matchedLines.length} dòng khớp`; downloadContent = matchedLines.join('\n'); newFileName = `extracted_${fileName}`; break;
+            }
+            renderFileResult(fileName, resultTitlePrefix, resultLines, downloadContent, newFileName);
+        }
+        
+        const PREVIEW_LINE_LIMIT = 500;
+        function renderDuplicateAnalysis(duplicates, sourceName) {
+            duplicates.sort((a, b) => b.count - a.count);
+            const resultItem = document.createElement('div');
+            resultItem.className = 'result-item analysis-box';
+            const header = document.createElement('h3');
+            const textarea = document.createElement('textarea');
+            textarea.readOnly = true;
+            let finalTitle = `Phân tích ${duplicates.length} dòng trùng lặp trong "${sourceName}"`;
+            let analysisContent = '';
+            const itemsToShow = duplicates.length > PREVIEW_LINE_LIMIT ? duplicates.slice(0, PREVIEW_LINE_LIMIT) : duplicates;
+            itemsToShow.forEach(item => { analysisContent += `(Lặp lại ${item.count} lần) ${item.line}\n`; });
+            if (duplicates.length > PREVIEW_LINE_LIMIT) {
+                finalTitle += ` (hiển thị ${PREVIEW_LINE_LIMIT} dòng trùng lặp nhiều nhất)`;
+                analysisContent += `\n... và ${duplicates.length - PREVIEW_LINE_LIMIT} dòng trùng lặp khác.`;
+            }
+            header.textContent = finalTitle;
+            textarea.value = analysisContent.trim();
+            resultItem.appendChild(header);
+            resultItem.appendChild(textarea);
+            duplicateAnalysisContainer.appendChild(resultItem);
+        }
+
+        function renderFileResult(originalFileName, titlePrefix, resultLines, downloadContent, newFileName) {
+            const resultItem = document.createElement('div');
+            resultItem.className = 'result-item';
+            const header = document.createElement('h3');
+            const textarea = document.createElement('textarea');
+            textarea.readOnly = true;
+            let finalTitle = `${titlePrefix} trong file: "${originalFileName}"`;
+            if (resultLines.length > PREVIEW_LINE_LIMIT) {
+                finalTitle += ` (hiển thị ${PREVIEW_LINE_LIMIT} dòng đầu tiên)`;
+                const previewLines = resultLines.slice(0, PREVIEW_LINE_LIMIT);
+                textarea.value = previewLines.join('\n') + `\n\n... và ${resultLines.length - PREVIEW_LINE_LIMIT} dòng khác không được hiển thị để tránh lag. File tải về sẽ có đầy đủ nội dung.`;
+            } else {
+                textarea.value = resultLines.join('\n');
+            }
+            header.textContent = finalTitle;
+            resultItem.appendChild(header);
+            resultItem.appendChild(textarea);
+            if (downloadContent !== null) {
+                const downloadBtn = document.createElement('button');
+                downloadBtn.className = 'download-btn';
+                downloadBtn.textContent = `Tải xuống ${newFileName}`;
+                downloadBtn.onclick = () => downloadFile(downloadContent, newFileName);
+                resultItem.appendChild(downloadBtn);
+            }
+            fileResultsContainer.appendChild(resultItem);
+        }
+        
+        function renderError(fileName, error) {
+            const errorItem = document.createElement('div');
+            errorItem.className = 'result-item';
+            errorItem.style.borderColor = 'var(--danger-color)';
+            errorItem.innerHTML = `<h3>Lỗi khi xử lý file "${fileName}"</h3><p>${error.message}</p>`;
+            fileResultsContainer.appendChild(errorItem);
+        }
+        
+        function downloadFile(content, fileName) {
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+    });
+    </script>
+
+</body>
+</html>
