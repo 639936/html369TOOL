@@ -108,7 +108,7 @@
         button.danger:hover { background-color: #a00; }
 
         .button-group { display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
-        .input-group { display: flex; align-items: center; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+        .input-group { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
         .input-group label { font-weight: bold; }
         .input-group input { background-color: var(--bg-color); color: var(--text-color); border: 1px solid var(--secondary-color); border-radius: 4px; padding: 8px; }
         
@@ -198,11 +198,7 @@
                 <div class="input-group">
                     <label for="separatorInput">Ký tự tách đoạn:</label>
                     <input type="text" id="separatorInput" value="\n\n" placeholder="\n\n">
-                    <!-- *** MODIFIED PART 1 *** -->
-                    <label for="chunkGroupSizeInput">Số đoạn gộp:</label>
-                    <input type="number" id="chunkGroupSizeInput" value="30" min="1" style="width: 60px;">
-                    <button id="prepareChunksBtn">Tách & Gộp đoạn</button>
-                    <!-- *** END OF MODIFIED PART 1 *** -->
+                    <button id="prepareChunksBtn">Tách thành các đoạn</button>
                 </div>
                 <p>Danh sách các đoạn cần xử lý <span id="progress-counter"></span></p>
                 <ul id="chunkList" class="chunk-list"></ul>
@@ -248,7 +244,7 @@
             <h2>Công cụ Chuẩn hoá Dữ liệu</h2>
             <div class="options-group">
                 <input type="checkbox" id="standardizer-remove-special-chars" checked>
-                <label for="standardizer-remove-special-chars">Xóa dòng chứa ký tự đặc biệt khi chuẩn hóa (loại trừ "{}")</label>
+                <label for="standardizer-remove-special-chars">Xóa dòng chứa ký tự đặc biệt khi chuẩn hóa</label>
             </div>
             <details open>
                 <summary>1. Chuẩn hóa file vừa được tạo</summary>
@@ -340,9 +336,6 @@
         const outputName = document.getElementById('outputName');
         const outputVp = document.getElementById('outputVp');
         const outputRule = document.getElementById('outputRule');
-        // *** MODIFIED PART 2 ***
-        const chunkGroupSizeInput = document.getElementById('chunkGroupSizeInput'); 
-        // *** END OF MODIFIED PART 2 ***
 
         // Standardizer DOM Elements
         const standardizeGeneratedBtn = document.getElementById('standardizeGeneratedBtn');
@@ -355,10 +348,7 @@
         // --- State Variables ---
         let chunksToProcess = [];
         let isProcessing = false;
-        // *** MODIFIED PART 3 ***
-        let fullInputText = ''; // Variable to store the complete text, for previewing purposes
-        // *** END OF MODIFIED PART 3 ***
-        const DEFAULT_PROMPT = `Mục tiêu: Phân tích văn bản tiếng Trung, trích xuất và dịch các thành phần cụ thể theo yêu cầu.\n\nYêu cầu chi tiết:\n\n1.  **Nhiệm vụ Phân tích**: Từ văn bản đầu vào, thực hiện ba nhiệm vụ sau:\n       **Nhiệm vụ 1: Dịch Tên**: Tìm tất cả tên riêng (tên người, địa danh, môn phái, công pháp, chiêu thức), danh từ chung và dịch chúng sang Hán Việt.\n       **Nhiệm vụ 2: Dịch Cụm Từ (Viet Phrase)**: Tìm các cụm từ hoặc cấu trúc câu phổ biến, không lớn hơn 6 ký tự và dịch sang tiếng Việt tự nhiên, dễ hiểu, giữ văn phong cổ trang.\n       **Nhiệm vụ 3: Tạo Luật Nhân**: Tìm các cấu trúc có chứa số hoặc danh từ có thể thay thế, cấu trúc không lớn hơn 6 ký tự, để tạo ra quy tắc chung, quy tắc cần dễ hiểu, sử dụng placeholder {0}, {1}.\n\n2.  **Định dạng đầu ra BẮT BUỘC**:\n    *   Kết quả phải là văn bản thuần túy, KHÔNG được chứa markdown hay bất kỳ lời giải thích nào.\n    *   Nội dung kết quả phải được chia thành BA phần, bắt đầu bằng các tiêu đề: "- tên:", "- việt phrase:", "- luật nhân:". kết quả dịch chỉ sử dụng ký tự in hoa hợp lý với tên riêng, chỉ sử dụng ký tự in thường với danh từ chung, việt phrase và luật nhân.\n    *   Mỗi mục trong các phần phải theo định dạng \`Tiếng Trung=tiếng việt\`.\n\n**QUY TẮC TUYỆT ĐỐI**: Chỉ được trả về kết quả theo đúng định dạng đã yêu cầu, không có markdown.`;
+        const DEFAULT_PROMPT = `Mục tiêu: Phân tích văn bản tiếng Trung, trích xuất và dịch các thành phần cụ thể theo yêu cầu.\n\nYêu cầu chi tiết:\n\n1.  **Nhiệm vụ Phân tích**: Từ văn bản đầu vào, thực hiện ba nhiệm vụ sau:\n    *   **Nhiệm vụ 1: Dịch Tên**: Tìm tất cả tên riêng (tên người, địa danh, môn phái, công pháp, chiêu thức), danh từ chung và dịch chúng sang Hán Việt.\n    *   **Nhiệm vụ 2: Dịch Cụm Từ (Viet Phrase)**: Tìm các cụm từ hoặc cấu trúc câu phổ biến (không quá 6 ký tự) và dịch sang tiếng Việt tự nhiên, dễ hiểu, giữ văn phong cổ trang.\n    *   **Nhiệm vụ 3: Tạo Luật Nhân**: Tìm các cấu trúc có chứa số hoặc danh từ có thể thay thế (cấu trúc đó không quá 6 ký tự) để tạo ra quy tắc chung, sử dụng placeholder {0}, {1}.\n\n2.  **Định dạng đầu ra BẮT BUỘC**:\n    *   Kết quả phải là văn bản thuần túy, KHÔNG được chứa markdown hay bất kỳ lời giải thích nào.\n    *   Nội dung phải được chia thành BA phần, bắt đầu bằng các tiêu đề: "- tên:", "- việt phrase:", "- luật nhân:". kết quả dịch chỉ sử dụng ký tự in hoa hợp lý với tên riêng, không sử dụng ký tự in hoa với danh từ chung, Viet Phrase và Luật Nhân.\n    *   Mỗi mục trong các phần phải theo định dạng \`Tiếng Trung=Tiếng Việt\`.\n\n**QUY TẮC TUYỆT ĐỐI**: Chỉ được trả về kết quả theo đúng định dạng đã yêu cầu, không có markdown.`;
 
         // --- Event Listeners ---
         document.addEventListener('DOMContentLoaded', loadState);
@@ -383,14 +373,8 @@
         // --- State Management ---
         function saveState() {
             const state = {
-                // Use fullInputText if available, otherwise use textarea content
-                mainText: fullInputText || mainTextInput.value, 
-                apiKeys: apiKeysInput.value, 
-                prompt: promptInput.value, 
-                chunks: chunksToProcess,
-                outputName: outputName.value, 
-                outputVp: outputVp.value, 
-                outputRule: outputRule.value,
+                apiKeys: apiKeysInput.value, prompt: promptInput.value, mainText: mainTextInput.value, chunks: chunksToProcess,
+                outputName: outputName.value, outputVp: outputVp.value, outputRule: outputRule.value,
             };
             localStorage.setItem('geminiProcessorState', JSON.stringify(state));
         }
@@ -401,38 +385,23 @@
                 const state = JSON.parse(stateJSON);
                 apiKeysInput.value = state.apiKeys || '';
                 promptInput.value = state.prompt || DEFAULT_PROMPT;
-                
-                // *** MODIFIED PART 4: Handle loading full text and preview ***
-                fullInputText = state.mainText || '';
-                updateMainTextInputWithPreview(); // New function to show preview
-                // *** END OF MODIFIED PART 4 ***
-                
+                mainTextInput.value = state.mainText || '';
                 chunksToProcess = state.chunks || [];
                 outputName.value = state.outputName || '';
                 outputVp.value = state.outputVp || '';
                 outputRule.value = state.outputRule || '';
                 updateChunkListUI();
                 updateProgressCounter();
-            } else { 
-                promptInput.value = DEFAULT_PROMPT; 
-            }
+            } else { promptInput.value = DEFAULT_PROMPT; }
         }
 
         function clearState() {
             localStorage.removeItem('geminiProcessorState');
-            chunksToProcess = []; 
-            isProcessing = false;
-            fullInputText = ''; // Reset full text
-            apiKeysInput.value = ''; 
-            promptInput.value = DEFAULT_PROMPT; 
-            mainTextInput.value = '';
-            outputName.value = ''; 
-            outputVp.value = ''; 
-            outputRule.value = '';
+            chunksToProcess = []; isProcessing = false;
+            apiKeysInput.value = ''; promptInput.value = DEFAULT_PROMPT; mainTextInput.value = '';
+            outputName.value = ''; outputVp.value = ''; outputRule.value = '';
             fileInput.value = '';
-            reviewName.value = ''; 
-            reviewVp.value = ''; 
-            reviewRule.value = '';
+            reviewName.value = ''; reviewVp.value = ''; reviewRule.value = '';
             
              ['name', 'vp', 'rule'].forEach(type => {
                 const container = document.getElementById(`standardizer-${type}`);
@@ -444,87 +413,33 @@
                 container.fileData = [];
             });
 
-            updateChunkListUI(); 
-            updateProgressCounter();
+            updateChunkListUI(); updateProgressCounter();
         }
 
         // --- File & Chunk Handling ---
-        // *** MODIFIED PART 5: Major update to handle file drop and preview ***
         async function handleFileDrop(files) {
-            const userTypedText = mainTextInput.value;
-            const fileContents = [];
-
             for (const file of files) {
                 try {
                     const content = await readFileAsText(file);
-                    fileContents.push(`--- Nội dung từ file: ${file.name} ---\n\n${content}`);
-                } catch(e) { 
-                    alert(`Không thể đọc file: ${file.name}`); 
-                }
-            }
-
-            // Combine existing text with new file contents
-            fullInputText = (userTypedText ? userTypedText + '\n\n' : '') + fileContents.join('\n\n');
-            
-            updateMainTextInputWithPreview();
-            alert(`Đã thêm nội dung từ ${files.length} file. Ô nhập liệu chính đang hiển thị bản xem trước nếu nội dung quá dài.`);
-        }
-
-        function updateMainTextInputWithPreview() {
-            const PREVIEW_LENGTH = 2000;
-            if (fullInputText.length > PREVIEW_LENGTH) {
-                mainTextInput.value = fullInputText.substring(0, PREVIEW_LENGTH) +
-                    `\n\n... (và còn ${fullInputText.length - PREVIEW_LENGTH} ký tự nữa. Toàn bộ nội dung đã được lưu để xử lý.)`;
-            } else {
-                mainTextInput.value = fullInputText;
+                    mainTextInput.value += `\n\n--- Nội dung từ file: ${file.name} ---\n\n${content}`;
+                } catch(e) { alert(`Không thể đọc file: ${file.name}`); }
             }
         }
         
         function handlePrepareChunks() {
             const separatorText = separatorInput.value.replace(/\\n/g, '\n');
-            if (!separatorText) { 
-                alert('Ký tự tách đoạn không được để trống.'); 
-                return; 
-            }
-            // Use the full stored text if available, otherwise fallback to the textarea content
-            const textToProcess = fullInputText || mainTextInput.value;
-            if (!textToProcess.trim()) { 
-                alert('Không có văn bản nào để tách.'); 
-                return; 
-            }
-            
-            const groupSize = parseInt(chunkGroupSizeInput.value, 10);
-            if (!groupSize || groupSize <= 0) {
-                alert('Số đoạn cần gộp phải là một số nguyên dương.');
-                return;
-            }
-        
-            const rawChunks = textToProcess.split(separatorText).filter(c => c.trim().length > 0);
-            const newGroupedChunks = [];
-        
-            for (let i = 0; i < rawChunks.length; i += groupSize) {
-                const group = rawChunks.slice(i, i + groupSize);
-                const combinedContent = group.join(separatorText);
-                
-                const startChunkNum = i + 1;
-                const endChunkNum = i + group.length;
-                const chunkId = `Đoạn gộp ${startChunkNum}-${endChunkNum}`;
-        
-                if (combinedContent.length >= 100) { // Lọc các đoạn gộp quá ngắn
-                     newGroupedChunks.push({
-                        id: chunkId,
-                        content: combinedContent,
-                        status: 'pending'
-                    });
-                }
-            }
-        
-            chunksToProcess = newGroupedChunks;
-            updateChunkListUI();
-            updateProgressCounter();
-            alert(`Đã tách và gộp thành công ${newGroupedChunks.length} đoạn lớn (từ ${rawChunks.length} đoạn nhỏ).`);
+            if (!separatorText) { alert('Ký tự tách đoạn không được để trống.'); return; }
+            const fullText = mainTextInput.value;
+            if (!fullText.trim()) { alert('Không có văn bản nào để tách.'); return; }
+
+            const rawChunks = fullText.split(separatorText);
+            const totalRawChunks = rawChunks.length;
+            chunksToProcess = rawChunks.map(content => content.trim()).filter(content => content.length >= 100)
+                .map((content, index) => ({ id: `Đoạn ${index + 1}`, content: content, status: 'pending' }));
+            const skippedCount = totalRawChunks - chunksToProcess.length;
+            updateChunkListUI(); updateProgressCounter();
+            alert(`Đã tách thành công ${chunksToProcess.length} đoạn. Bỏ qua ${skippedCount} đoạn có độ dài dưới 100 ký tự.`);
         }
-        // *** END OF MODIFIED PART 5 ***
 
         function updateChunkListUI() {
             chunkListElem.innerHTML = '';
@@ -545,28 +460,7 @@
         function readFileAsText(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
-                reader.onload = () => {
-                    const textContent = reader.result;
-                    if (file.type === 'text/html' || file.name.endsWith('.html')) {
-                        try {
-                            const parser = new DOMParser();
-                            const doc = parser.parseFromString(textContent, 'text/html');
-                            const contentElement = doc.querySelector('.content');
-                            if (contentElement) {
-                                console.log(`Trích xuất nội dung từ .content của file ${file.name}`);
-                                resolve(contentElement.textContent || '');
-                            } else {
-                                console.log(`Không tìm thấy .content trong ${file.name}, lấy toàn bộ nội dung.`);
-                                resolve(textContent); // Fallback to full text
-                            }
-                        } catch (e) {
-                            console.error(`Lỗi parse HTML file ${file.name}:`, e);
-                            resolve(textContent); // Fallback on parsing error
-                        }
-                    } else {
-                        resolve(textContent); // Not an HTML file
-                    }
-                };
+                reader.onload = () => resolve(reader.result);
                 reader.onerror = () => reject(reader.error);
                 reader.readAsText(file);
             });
@@ -636,11 +530,11 @@
         }
         
         // ================================================================
-        // === LOGIC CHUẨN HÓA (UNCHANGED) ===
+        // === LOGIC MỚI CHO CHUẨN HÓA - TÍCH HỢP TỪ FILE VP.HTML ===
         // ================================================================
 
         const VIETNAMESE_CHARS = 'àáâãèéêìíòóôõùúăđĩũơưạảấầẩẫậắằẳẵặẹẻẽếềểễệỉịọỏốồổỗộớờởỡợụủứừửữựỳýỵỷỹ';
-        const ALLOWED_CHARS_REGEX = new RegExp(`^[\u4E00-\u9FFFa-zA-Z0-9=\\s\\{\\}${VIETNAMESE_CHARS}${VIETNAMESE_CHARS.toUpperCase()}]+$`);
+        const ALLOWED_CHARS_REGEX = new RegExp(`^[\u4E00-\u9FFFa-zA-Z0-9=\\s${VIETNAMESE_CHARS}${VIETNAMESE_CHARS.toUpperCase()}]+$`);
 
         function containsChinese(text) { return /[\u4E00-\u9FFF]/.test(text); }
         function containsSpecialChars(text) { return !ALLOWED_CHARS_REGEX.test(text); }
@@ -651,8 +545,13 @@
             return words.every(word => word.length === 0 || isUpperCaseChar(word[0]));
         }
 
+        /**
+         * Hàm chuẩn hóa nâng cao, tích hợp tất cả các bộ lọc.
+         */
         function advancedStandardizeText(inputText, options) {
             if (!inputText || !inputText.trim()) return '';
+            
+            // Bước 1: Loại bỏ trùng lặp dựa trên key (phần trước dấu '=')
             const uniqueEntries = new Map();
             const allLines = inputText.split('\n');
             for (const line of allLines) {
@@ -666,11 +565,19 @@
                     uniqueEntries.set(key, value);
                 }
             }
+
+            // Bước 2: Áp dụng các bộ lọc nâng cao trên các dòng đã được loại bỏ trùng lặp
             const resultLines = [];
             for (const [key, value] of uniqueEntries.entries()) {
                 const currentLine = `${key}=${value}`;
+
+                // Lọc 1: Phải chứa Hán tự
                 if (!containsChinese(currentLine)) continue;
+
+                // Lọc 2: Không chứa ký tự đặc biệt (nếu tùy chọn được bật)
                 if (options.removeSpecialChars && containsSpecialChars(currentLine)) continue;
+
+                // Chuẩn hóa 3: Viết thường nếu không phải Title Case
                 if (isTitleCase(value)) {
                     resultLines.push(currentLine);
                 } else {
@@ -690,11 +597,14 @@
         }
 
         function handleStandardizeGenerated() {
-            const options = { removeSpecialChars: removeSpecialCharsToggle.checked };
+            const options = {
+                removeSpecialChars: removeSpecialCharsToggle.checked
+            };
             
+            // Xử lý và cập nhật cho từng ô
             const fullResultName = advancedStandardizeText(outputName.value, options);
-            reviewName.fullContent = fullResultName;
-            reviewName.value = createContentPreview(fullResultName);
+            reviewName.fullContent = fullResultName; // Lưu trữ toàn bộ nội dung
+            reviewName.value = createContentPreview(fullResultName); // Chỉ hiển thị review
 
             const fullResultVp = advancedStandardizeText(outputVp.value, options);
             reviewVp.fullContent = fullResultVp;
@@ -759,8 +669,8 @@
                 const options = { removeSpecialChars: removeSpecialCharsToggle.checked };
                 const fullResult = advancedStandardizeText(combinedText, options);
 
-                outputTextArea.fullContent = fullResult;
-                outputTextArea.value = createContentPreview(fullResult);
+                outputTextArea.fullContent = fullResult; // Lưu toàn bộ nội dung
+                outputTextArea.value = createContentPreview(fullResult); // Hiển thị review
                 alert(`Đã chuẩn hoá xong ${type.toUpperCase()}!`);
             });
 
@@ -771,8 +681,10 @@
         // --- Utility Functions (Updated) ---
         function copyToClipboard(element) {
             const textarea = (typeof element === 'string') ? document.getElementById(element) : element;
+            // Ưu tiên copy nội dung đầy đủ nếu có, nếu không thì copy nội dung hiển thị
             const contentToCopy = textarea.fullContent || textarea.value;
 
+            // Dùng một textarea tạm để copy, tránh làm select trên textarea chính
             const tempTextarea = document.createElement('textarea');
             tempTextarea.value = contentToCopy;
             document.body.appendChild(tempTextarea);
@@ -785,6 +697,7 @@
 
         function downloadAsFile(element, filename) {
             const textarea = (typeof element === 'string') ? document.getElementById(element) : element;
+             // Ưu tiên tải nội dung đầy đủ nếu có, nếu không thì tải nội dung hiển thị
             const contentToDownload = textarea.fullContent || textarea.value;
 
             const blob = new Blob([contentToDownload], { type: 'text/plain;charset=utf-8' });
