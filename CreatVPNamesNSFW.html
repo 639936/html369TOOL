@@ -175,7 +175,7 @@
             <div class="grid-container">
                 <div class="settings-panel">
                     <h3>Cài đặt</h3>
-                    <details>
+                    <details open>
                         <summary>API Keys</summary>
                         <textarea id="apiKeysInput" placeholder="Dán mỗi API Key trên một dòng..."></textarea>
                     </details>
@@ -224,21 +224,21 @@
             <div class="full-width output-grid">
                 <div class="output-area">
                     <div class="output-header"><h4>Kết quả: Tên Riêng</h4><div class="button-group"><button class="secondary" onclick="copyToClipboard('outputName')">Copy</button><button class="secondary" onclick="downloadAsFile('outputName', 'name.txt')">Tải về</button></div></div>
-                    <details>
+                    <details open>
                         <summary>review</summary>
                         <textarea id="outputName" placeholder="..."></textarea>
                     </details>
                 </div>
                 <div class="output-area">
                     <div class="output-header"><h4>Kết quả: Việt Phrase</h4><div class="button-group"><button class="secondary" onclick="copyToClipboard('outputVp')">Copy</button><button class="secondary" onclick="downloadAsFile('outputVp', 'vp.txt')">Tải về</button></div></div>
-                    <details>
+                    <details open>
                         <summary>review</summary>
                         <textarea id="outputVp" placeholder="..."></textarea>
                     </details>
                 </div>
                 <div class="output-area">
                     <div class="output-header"><h4>Kết quả: Luật Nhân</h4><div class="button-group"><button class="secondary" onclick="copyToClipboard('outputRule')">Copy</button><button class="secondary" onclick="downloadAsFile('outputRule', 'rule.txt')">Tải về</button></div></div>
-                    <details>
+                    <details open>
                         <summary>review</summary>
                         <textarea id="outputRule" placeholder="..."></textarea>
                     </details>
@@ -283,7 +283,7 @@
                 </div>
             </details>
 
-            <details>
+            <details open>
                 <summary>2. Chuẩn hóa file Name tùy chỉnh</summary>
                 <div id="standardizer-name">
                     <textarea placeholder="Dán nội dung Name vào đây..."></textarea>
@@ -298,7 +298,7 @@
                 </div>
             </details>
 
-            <details>
+            <details open>
                 <summary>3. Chuẩn hóa file VP tùy chỉnh</summary>
                 <div id="standardizer-vp">
                     <textarea placeholder="Dán nội dung VP vào đây..."></textarea>
@@ -313,7 +313,7 @@
                 </div>
             </details>
 
-            <details>
+            <details open>
                 <summary>4. Chuẩn hóa file Rule tùy chỉnh</summary>
                  <div id="standardizer-rule">
                     <textarea placeholder="Dán nội dung Rule vào đây..."></textarea>
