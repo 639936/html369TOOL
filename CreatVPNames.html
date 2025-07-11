@@ -562,7 +562,7 @@
             
             const body = {
                 "contents": [{ "parts": [{ "text": full_prompt }] }],
-                "generationConfig": { "temperature": 0.4, "topK": 1, "topP": 1, "maxOutputTokens": 64000 },
+                "generationConfig": { "temperature": 0.5, "topK": 1, "topP": 1, "maxOutputTokens": 65536 },
                 "safetySettings": [ { "category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE" }, { "category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE" }, { "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE" }, { "category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE" } ]
             };
 
