@@ -216,7 +216,7 @@
             const CHINESE_ONLY_REGEX = /[\u4e00-\u9fa5]/g;
             const CN_EN_ONLY_REGEX = /^[a-zA-Z\u4e00-\u9fa5\s=]*$/;
             // ===== SỬA LỖI REGEX TẠI ĐÂY =====
-            const SPECIAL_CHARS_REGEX = /[^\p{L}\p{N}\s={},]/u;
+            const SPECIAL_CHARS_REGEX = /[^\p{L}\p{N}\s={},\/]/u;
 
             let userRegex = null;
             if (options.regex && options.regexPattern) {
