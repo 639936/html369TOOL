@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Công cụ Lọc và Xử lý File Text (Sửa lỗi Regex)</title>
+    <title>Công cụ Lọc và Xử lý File Text (Nâng cao)</title>
     <style>
         :root {
             --primary-color: #007bff;
@@ -70,12 +70,18 @@
                 <!-- Nhóm Xóa Hết -->
                 <div class="control-group"><input type="checkbox" id="f-no-chinese"><label for="f-no-chinese">Những dòng <strong>không</strong> chứa ký tự tiếng Trung</label></div>
                 <div class="control-group"><input type="checkbox" id="f-n-chinese"><label for="f-n-chinese">Những dòng chỉ chứa</label><input type="number" id="f-n-chinese-count" value="1" min="0"><label for="f-n-chinese-count">ký tự tiếng Trung</label></div>
-                <div class="control-group"><input type="checkbox" id="f-cn-en-only"><label for="f-cn-en-only">Những dòng chỉ chứa ký tự tiếng Trung, tiếng Anh (a-z, A-Z) và dấu '='</label></div>
+                
+                <!-- ===== TÍCH MỚI ĐƯỢC THÊM VÀO ===== -->
                 <div class="control-group">
-                    <input type="checkbox" id="f-special-chars">
-                    <!-- ===== CẬP NHẬT MÔ TẢ ===== -->
-                    <label for="f-special-chars">Những dòng có chứa ký tự đặc biệt (loại trừ: chữ cái, số, khoảng trắng, <code>= { } , /</code>)</label>
+                    <input type="checkbox" id="f-more-than-x-chinese">
+                    <label for="f-more-than-x-chinese">Những dòng có nhiều hơn</label>
+                    <input type="number" id="f-more-than-x-chinese-count" value="10" min="0">
+                    <label for="f-more-than-x-chinese-count">ký tự tiếng Trung</label>
                 </div>
+                <!-- ===================================== -->
+
+                <div class="control-group"><input type="checkbox" id="f-cn-en-only"><label for="f-cn-en-only">Những dòng chỉ chứa ký tự tiếng Trung, tiếng Anh (a-z, A-Z) và dấu '='</label></div>
+                <div class="control-group"><input type="checkbox" id="f-special-chars"><label for="f-special-chars">Những dòng có chứa ký tự đặc biệt (loại trừ: chữ cái, số, khoảng trắng, <code>= { } ,</code>)</label></div>
                 <div class="control-group"><input type="checkbox" id="f-custom-special-chars"><label for="f-custom-special-chars">Những dòng có chứa các ký tự đặc biệt sau:</label><textarea id="f-custom-special-chars-list" placeholder="Nhập mỗi ký tự trên một dòng..."></textarea></div>
                 <div class="control-group"><input type="checkbox" id="f-regex"><label for="f-regex">Những dòng khớp với Regex:</label><input type="text" id="f-regex-pattern" placeholder="Nhập biểu thức chính quy (regex) tại đây"></div>
                 <!-- Nhóm Giữ lại dòng đầu -->
@@ -174,12 +180,19 @@
         function processFile(fileName, content) {
             const lines = content.split(/\r?\n/);
             const options = {
-                noChinese: document.getElementById('f-no-chinese').checked, nChinese: document.getElementById('f-n-chinese').checked,
-                nChineseCount: parseInt(document.getElementById('f-n-chinese-count').value, 10), cnEnOnly: document.getElementById('f-cn-en-only').checked,
-                specialChars: document.getElementById('f-special-chars').checked, customSpecialChars: document.getElementById('f-custom-special-chars').checked,
+                noChinese: document.getElementById('f-no-chinese').checked,
+                nChinese: document.getElementById('f-n-chinese').checked,
+                nChineseCount: parseInt(document.getElementById('f-n-chinese-count').value, 10),
+                moreThanXChinese: document.getElementById('f-more-than-x-chinese').checked, // Lấy option mới
+                moreThanXChineseCount: parseInt(document.getElementById('f-more-than-x-chinese-count').value, 10), // Lấy option mới
+                cnEnOnly: document.getElementById('f-cn-en-only').checked,
+                specialChars: document.getElementById('f-special-chars').checked,
+                customSpecialChars: document.getElementById('f-custom-special-chars').checked,
                 customSpecialCharsList: document.getElementById('f-custom-special-chars-list').value.split('\n').filter(c => c.trim() !== ''),
-                regex: document.getElementById('f-regex').checked, regexPattern: document.getElementById('f-regex-pattern').value,
-                duplicatePre: document.getElementById('f-duplicate-pre').checked, duplicatePost: document.getElementById('f-duplicate-post').checked,
+                regex: document.getElementById('f-regex').checked,
+                regexPattern: document.getElementById('f-regex-pattern').value,
+                duplicatePre: document.getElementById('f-duplicate-pre').checked,
+                duplicatePost: document.getElementById('f-duplicate-post').checked,
                 duplicateLines: document.getElementById('f-duplicate-lines').checked,
             };
             
@@ -215,12 +228,10 @@
             const CHINESE_REGEX = /[\u4e00-\u9fa5]/;
             const CHINESE_ONLY_REGEX = /[\u4e00-\u9fa5]/g;
             const CN_EN_ONLY_REGEX = /^[a-zA-Z\u4e00-\u9fa5\s=]*$/;
-            // ===== SỬA LỖI REGEX TẠI ĐÂY =====
-            const SPECIAL_CHARS_REGEX = /[^\p{L}\p{N}\s={},\/]/u;
-
+            const SPECIAL_CHARS_REGEX = /[^\p{L}\p{N}\s={},]/u;
             let userRegex = null;
             if (options.regex && options.regexPattern) {
-                try { userRegex = new RegExp(options.regexPattern, 'u'); } catch (e) { // Thêm cờ 'u' cho Regex người dùng
+                try { userRegex = new RegExp(options.regexPattern, 'u'); } catch (e) {
                     alert(`Lỗi Regex không hợp lệ: ${e.message}`); return;
                 }
             }
@@ -231,8 +242,13 @@
                 if (trimmedLine === '') { unmatchedLines.push(line); continue; }
 
                 let isHardMatch = false;
-                if (options.noChinese && !CHINESE_REGEX.test(line)) isHardMatch = true;
-                else if (options.nChinese && (line.match(CHINESE_ONLY_REGEX) || []).length === options.nChineseCount) isHardMatch = true;
+                const chineseCharsCount = (line.match(CHINESE_ONLY_REGEX) || []).length;
+
+                if (options.noChinese && chineseCharsCount === 0) isHardMatch = true;
+                else if (options.nChinese && chineseCharsCount === options.nChineseCount) isHardMatch = true;
+                // ===== THÊM ĐIỀU KIỆN LỌC MỚI VÀO LOGIC =====
+                else if (options.moreThanXChinese && chineseCharsCount > options.moreThanXChineseCount) isHardMatch = true;
+                // ===============================================
                 else if (options.cnEnOnly && CN_EN_ONLY_REGEX.test(line)) isHardMatch = true;
                 else if (options.specialChars && SPECIAL_CHARS_REGEX.test(line)) isHardMatch = true;
                 else if (options.customSpecialChars && options.customSpecialCharsList.length > 0 && options.customSpecialCharsList.some(char => line.includes(char))) isHardMatch = true;
