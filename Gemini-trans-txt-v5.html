@@ -409,7 +409,7 @@ async function translateSingleChunk(index) {
     for (let i = 0; i < keysToTry.length; i++) {
         if (shouldStopProcess) return false;
         const apiKeyToUse = keysToTry[i];
-        log(`  -> Phần ${index + 1}: Thử với Key ${i + 1}/${keysToTry.length} (${apiKeyToUse.substring(0, 4)}...)`);
+        log(`  -> Phần ${index + 1}: Thử với Key ${i + 1}/${keysToTry.length} (${apiKeyToUse}...)`);
         
         const result = await callGeminiAPI_Browser(chunkToSend, selectedPrompt, apiKeyToUse, modelToUse, genConfig);
         log(`  -> Phản hồi JSON cho Phần ${index + 1}:\n${JSON.stringify(result.rawResponse, null, 2)}`);
