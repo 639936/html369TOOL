@@ -59,12 +59,6 @@
 </head>
 <body>
 
-<div id="session-restore-banner">
-    Tìm thấy một phiên làm việc chưa hoàn tất. 
-    <button class="small-btn download-btn" onclick="restoreSession()">Khôi phục</button>
-    <button class="small-btn stop-btn" onclick="dismissRestore()">Bỏ qua</button>
-</div>
-
 <h1>Gemini Advanced Translation Testbed v6 (Auto-Save & Enhanced Editing)</h1>
 
 <div class="main-container">
@@ -242,9 +236,6 @@ window.onload = function() {
     // Gán sự kiện
     fileInput.addEventListener('change', handleNewFile);
     sessionInput.addEventListener('change', handleSessionFile);
-
-    // Kiểm tra phiên làm việc đã lưu
-    checkForSavedSession();
 };
 
 function log(message) { if (logOutputEl) { logOutputEl.textContent += `[${new Date().toLocaleTimeString()}] ${message}\n`; logOutputEl.scrollTop = logOutputEl.scrollHeight; } console.log(message); }
@@ -257,7 +248,6 @@ function phienAmToHanViet(text) {
 }
 
 function clearSession() {
-    localStorage.removeItem('translationSession');
     chunks = [];
     fullText = "";
     globalEditedText = null;
@@ -356,56 +346,6 @@ function saveSession() {
     log("Đã lưu phiên làm việc vào file.");
 }
 
-function autoSaveSession() {
-    if (chunks.length === 0 || isTranslating) return;
-    try {
-        const session = {
-            settings: {
-                apiKeys: document.getElementById('apiKeys').value.split('\n').filter(Boolean), model: document.getElementById('modelSelect').value, chunkSize: document.getElementById('chunkSize').value,
-                minChunkSize: document.getElementById('minChunkSize').value, temperature: document.getElementById('temperature').value, topP: document.getElementById('topP').value, topK: document.getElementById('topK').value,
-                maxOutputTokens: document.getElementById('maxOutputTokens').value, maxConcurrent: document.getElementById('maxConcurrent').value, retryDelay: document.getElementById('retryDelay').value, prompt: document.getElementById('promptSelect').value,
-                autoRetry: document.getElementById('autoRetryCheckbox').checked
-            },
-            fullText: fullText, globalEditedText: globalEditedText,
-            chunks: chunks.map(c => ({
-                originalText: c.originalText, pinyinText: c.pinyinText, translatedText: c.translatedText,
-                status: (c.status === 'translating' || c.status === 'retrying') ? 'pending' : c.status,
-                errorMessage: c.element?.querySelector('.chunk-status')?.title || ''
-            }))
-        };
-        localStorage.setItem('translationSession', JSON.stringify(session));
-        log("Phiên làm việc đã được tự động lưu.");
-    } catch (e) {
-        log("Lỗi khi tự động lưu phiên: " + e.message);
-    }
-}
-
-function checkForSavedSession() {
-    const savedSession = localStorage.getItem('translationSession');
-    if (savedSession) {
-        document.getElementById('session-restore-banner').style.display = 'block';
-    }
-}
-function restoreSession() {
-    const savedSession = localStorage.getItem('translationSession');
-    if (savedSession) {
-        try {
-            const session = JSON.parse(savedSession);
-            loadSessionData(session);
-            log("Đã khôi phục phiên làm việc từ bộ nhớ đệm.");
-        } catch (e) {
-            log("Lỗi khôi phục phiên: " + e.message);
-            localStorage.removeItem('translationSession');
-        }
-    }
-    document.getElementById('session-restore-banner').style.display = 'none';
-}
-function dismissRestore() {
-    localStorage.removeItem('translationSession');
-    document.getElementById('session-restore-banner').style.display = 'none';
-    log("Đã bỏ qua phiên làm việc cũ.");
-}
-
 function updateProgressBar() {
     if (chunks.length === 0) {
         progressBar.style.width = '0%';
@@ -432,9 +372,6 @@ function updateChunkStatus(index, status, message = '') {
     viewBtn.style.display = status === 'success' ? 'inline-block' : 'none';
     updateGlobalButtons();
     updateProgressBar();
-    if (status === 'success' || status === 'failed') {
-        autoSaveSession();
-    }
 }
 
 function updateGlobalButtons() {
@@ -489,7 +426,6 @@ function saveModalChanges() {
         chunks[currentEditingChunkIndex].translatedText = modalTextarea.value;
         log(`Đã lưu thay đổi cho Phần ${currentEditingChunkIndex + 1}.`);
         closeModal();
-        autoSaveSession(); // Lưu lại session sau khi sửa
     }
 }
 function retranslateChunkFromModal() {
@@ -579,7 +515,7 @@ async function translateSingleChunk(index) {
                 log(`LƯU Ý: Phần ${index + 1} bị cắt ngắn do MAX_TOKENS.`);
             } 
             // KHÔI PHỤC LẠI: KIỂM TRA ĐỘ DÀI KẾT QUẢ
-            else if ((result.data.length / chunkToSend.length) < 0.5) {
+            else if ((result.data.length / chunkToSend.length) < 0.8) {
                  errorMessage = `Kết quả trả về quá ngắn (tỷ lệ ${Math.round((result.data.length / chunkToSend.length) * 100)}%). Coi là lỗi.`;
                  log(`LƯU Ý: Phần ${index + 1} có kết quả ngắn bất thường.`);
             }
@@ -761,7 +697,6 @@ function saveGlobalChanges() {
     } else {
         log(`CẢNH BÁO: Số lượng đoạn sau khi sửa (${editedParts.length}) khác với số phần gốc (${chunks.length}). Thay đổi được lưu toàn cục nhưng không cập nhật lại từng phần.`);
     }
-    autoSaveSession();
     closeGlobalModal();
 }
 
