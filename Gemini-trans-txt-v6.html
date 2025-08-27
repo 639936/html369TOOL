@@ -128,8 +128,11 @@
                 <button id="downloadButton" class="download-btn" onclick="downloadResult()">Tải kết quả (.txt)</button>
             </div>
         </div>
-        <div class="card">
-            <h2>Log Chi Tiết</h2>
+                <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h2>Log Chi Tiết</h2>
+                <button id="clearLogButton" class="small-btn stop-btn" onclick="clearLog()">Xóa Log</button>
+            </div>
             <pre id="logOutput"></pre>
         </div>
     </div>
@@ -719,6 +722,12 @@ function findAndReplace(replaceAll = false) {
         }
     } catch (e) {
         alert("Lỗi Regex: " + e.message);
+    }
+}
+function clearLog() {
+    if (logOutputEl) {
+        logOutputEl.textContent = '';
+        log("Log đã được xóa."); 
     }
 }
 </script>
