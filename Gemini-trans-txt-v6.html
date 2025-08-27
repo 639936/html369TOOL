@@ -55,6 +55,11 @@
         #progress-bar-container { width: 100%; background-color: #e9ecef; border-radius: 4px; overflow: hidden; margin-bottom: 10px; }
         #progress-bar { width: 0%; height: 20px; background-color: #28a745; text-align: center; line-height: 20px; color: white; font-weight: bold; transition: width 0.3s ease; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+        .change-item { border-bottom: 1px solid #555; padding-bottom: 5px; margin-bottom: 5px; font-size: 12px; }
+        .change-item p { margin: 0 0 5px 0; font-weight: bold; }
+        .change-item pre { margin: 2px 0; padding: 2px 5px; border-radius: 3px; white-space: pre-wrap; word-wrap: break-word; }
+        .change-before { background-color: #5d282d; color: #ffc9cc; }
+        .change-after { background-color: #1c4a27; color: #c3e6cb; }
     </style>
 </head>
 <body>
@@ -163,22 +168,46 @@
 </div>
 
 <!-- Modal để chỉnh sửa toàn bộ -->
+<!-- THAY THẾ TOÀN BỘ KHỐI DIV NÀY -->
 <div id="globalEditModal" class="modal-overlay">
-    <div class="modal-content" style="width: 90%; max-width: 1200px; margin: 5% auto;">
+    <div class="modal-content" style="width: 95%; max-width: 1400px; margin: 2% auto;">
         <div class="modal-header">
-            <h3 id="global-modal-title">Chỉnh sửa Toàn bộ Nội dung</h3>
+            <h3 id="global-modal-title">Chỉnh sửa Toàn bộ Nội dung Nâng cao</h3>
             <button class="stop-btn small-btn" onclick="closeGlobalModal()">Đóng</button>
         </div>
+        
+        <!-- Hàng điều khiển tìm kiếm & thay thế -->
         <div style="display: flex; gap: 10px; margin-bottom: 10px; align-items: center; flex-wrap: wrap;">
-            <input type="text" id="find-input" placeholder="Tìm kiếm..." style="flex: 1; min-width: 150px;">
-            <input type="text" id="replace-input" placeholder="Thay thế bằng..." style="flex: 1; min-width: 150px;">
-            <button class="small-btn view-btn" onclick="findAndReplace(false)">Thay thế</button>
+            <input type="text" id="find-input" placeholder="Tìm kiếm..." style="flex: 2; min-width: 200px;">
+            <input type="text" id="replace-input" placeholder="Thay thế bằng..." style="flex: 2; min-width: 200px;">
+            <button class="small-btn view-btn" onclick="findAndReplace(false)">Thay thế 1</button>
             <button class="small-btn retry-btn" onclick="findAndReplace(true)">Thay thế Tất cả</button>
             <div class="checkbox-group" style="margin-left: 10px;"><input type="checkbox" id="regex-checkbox"><label for="regex-checkbox">Dùng Regex</label></div>
         </div>
-        <textarea id="global-modal-textarea" style="height: 60vh;"></textarea>
+
+        <!-- Hàng điều khiển hiển thị & phân trang -->
+        <div style="display: flex; gap: 15px; margin-bottom: 10px; align-items: center; background-color: #f8f9fa; padding: 8px; border-radius: 4px;">
+            <label for="display-percentage" style="margin-bottom: 0;">Hiển thị:</label>
+            <input type="number" id="display-percentage" value="10" min="1" max="100" style="width: 60px; padding: 4px;">
+            <span>%</span>
+            <button class="small-btn" onclick="applyDisplayPercentage()">Áp dụng</button>
+            <div style="margin-left: auto; display: flex; align-items: center; gap: 10px;">
+                <button class="small-btn" id="prev-page-btn" onclick="changeGlobalPage(-1)">&lt; Trang trước</button>
+                <span id="page-info">Trang 1 / 10</span>
+                <button class="small-btn" id="next-page-btn" onclick="changeGlobalPage(1)">Trang sau &gt;</button>
+            </div>
+        </div>
+        
+        <!-- Khu vực hiển thị nhật ký thay đổi -->
+        <div id="change-log-container" style="max-height: 150px; overflow-y: auto; background: #2d2d2d; color: white; padding: 10px; border-radius: 4px; margin-bottom: 10px; display: none;">
+            <h4>Nhật ký thay đổi:</h4>
+            <div id="change-log-content"></div>
+        </div>
+
+        <textarea id="global-modal-textarea" style="height: 55vh; background-color: #e9ecef;" readonly></textarea>
+        
         <div class="modal-footer">
-            <button class="download-btn" onclick="saveGlobalChanges()">Lưu và Đóng</button>
+            <button class="download-btn" onclick="saveGlobalChanges()">Lưu Toàn Bộ Thay Đổi và Đóng</button>
         </div>
     </div>
 </div>
@@ -677,52 +706,183 @@ function downloadResult() {
 }
 
 // CÁC HÀM MỚI CHO VIỆC CHỈNH SỬA TOÀN BỘ
+// =================================================================================
+// BIẾN TRẠNG THÁI MỚI CHO MODAL CHỈNH SỬA TOÀN BỘ
+// =================================================================================
+let fullGlobalText = "";      // Chuỗi chứa toàn bộ văn bản
+let globalTextLines = [];     // Mảng chứa các dòng của toàn bộ văn bản
+let currentPage = 1;          // Trang hiển thị hiện tại
+let totalPages = 1;           // Tổng số trang
+let linesPerPage = 100;       // Số dòng hiển thị trên một trang
+
+// =================================================================================
+// CÁC HÀM ĐÃ SỬA ĐỔI VÀ HÀM MỚI CHO MODAL CHỈNH SỬA TOÀN BỘ
+// =================================================================================
+
 function openGlobalModal() {
     if (!chunks.every(c => c.status === 'success')) {
         alert("Vui lòng dịch thành công tất cả các phần trước khi chỉnh sửa."); return;
     }
-    const globalModal = document.getElementById('globalEditModal');
-    const globalTextarea = document.getElementById('global-modal-textarea');
-    globalTextarea.value = chunks.map(c => c.translatedText).join("\n\n");
-    globalModal.style.display = 'block';
-    log("Đã mở trình chỉnh sửa toàn bộ.");
+    
+    // Nạp dữ liệu
+    fullGlobalText = chunks.map(c => c.translatedText).join("\n\n");
+    globalTextLines = fullGlobalText.split('\n');
+
+    // Reset trạng thái
+    currentPage = 1;
+    document.getElementById('change-log-container').style.display = 'none';
+    document.getElementById('change-log-content').innerHTML = '';
+    
+    // Cập nhật view
+    applyDisplayPercentage(); // Hàm này sẽ tính toán và gọi updateGlobalTextareaView
+    
+    document.getElementById('globalEditModal').style.display = 'block';
+    log("Đã mở trình chỉnh sửa toàn bộ nâng cao.");
 }
 
-function closeGlobalModal() { document.getElementById('globalEditModal').style.display = 'none'; }
+function closeGlobalModal() {
+    document.getElementById('globalEditModal').style.display = 'none';
+    // Dọn dẹp để giải phóng bộ nhớ
+    fullGlobalText = "";
+    globalTextLines = [];
+}
 
-function saveGlobalChanges() {
-    const globalTextarea = document.getElementById('global-modal-textarea');
-    globalEditedText = globalTextarea.value;
-    const editedParts = globalEditedText.split("\n\n");
-    if (editedParts.length === chunks.length) {
-        chunks.forEach((chunk, index) => { chunk.translatedText = editedParts[index] || ""; });
-        log("Đã lưu và cập nhật nội dung các phần từ trình chỉnh sửa toàn bộ.");
-    } else {
-        log(`CẢNH BÁO: Số lượng đoạn sau khi sửa (${editedParts.length}) khác với số phần gốc (${chunks.length}). Thay đổi được lưu toàn cục nhưng không cập nhật lại từng phần.`);
+// Cập nhật lại view của textarea dựa trên trang hiện tại
+function updateGlobalTextareaView() {
+    const textarea = document.getElementById('global-modal-textarea');
+    const pageInfo = document.getElementById('page-info');
+    const prevBtn = document.getElementById('prev-page-btn');
+    const nextBtn = document.getElementById('next-page-btn');
+
+    const startLine = (currentPage - 1) * linesPerPage;
+    const endLine = startLine + linesPerPage;
+    
+    const textToShow = globalTextLines.slice(startLine, endLine).join('\n');
+    textarea.value = textToShow;
+    textarea.scrollTop = 0; // Cuộn lên đầu mỗi khi chuyển trang
+
+    pageInfo.textContent = `Trang ${currentPage} / ${totalPages}`;
+    prevBtn.disabled = (currentPage === 1);
+    nextBtn.disabled = (currentPage === totalPages || totalPages === 0);
+}
+
+// Áp dụng khi người dùng thay đổi % hiển thị
+function applyDisplayPercentage() {
+    const percentage = parseInt(document.getElementById('display-percentage').value, 10);
+    if (isNaN(percentage) || percentage < 1 || percentage > 100) {
+        alert("Vui lòng nhập một số từ 1 đến 100.");
+        return;
     }
-    closeGlobalModal();
+
+    const totalLines = globalTextLines.length;
+    linesPerPage = Math.max(1, Math.ceil(totalLines * (percentage / 100)));
+    totalPages = Math.max(1, Math.ceil(totalLines / linesPerPage));
+    currentPage = 1;
+
+    updateGlobalTextareaView();
 }
 
+// Chuyển trang trước/sau
+function changeGlobalPage(direction) {
+    const newPage = currentPage + direction;
+    if (newPage >= 1 && newPage <= totalPages) {
+        currentPage = newPage;
+        updateGlobalTextareaView();
+    }
+}
+
+// Ghi lại các thay đổi vào khu vực log
+function renderChangeLog(changes) {
+    const logContainer = document.getElementById('change-log-container');
+    const logContent = document.getElementById('change-log-content');
+
+    if (changes.length === 0) {
+        logContent.innerHTML = '<p style="color: #ffc107;">Không tìm thấy kết quả nào để thay thế.</p>';
+    } else {
+        logContent.innerHTML = changes.map(change => `
+            <div class="change-item">
+                <p>Dòng ${change.line + 1}:</p>
+                <pre class="change-before">- ${change.before.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</pre>
+                <pre class="change-after">+ ${change.after.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</pre>
+            </div>
+        `).join('');
+    }
+    logContainer.style.display = 'block';
+}
+
+
+// Hàm tìm kiếm và thay thế được viết lại hoàn toàn
 function findAndReplace(replaceAll = false) {
     const findInput = document.getElementById('find-input').value;
     const replaceInput = document.getElementById('replace-input').value;
     const useRegex = document.getElementById('regex-checkbox').checked;
-    const textarea = document.getElementById('global-modal-textarea');
+    
     if (!findInput) return;
 
+    let regex;
     try {
         if (useRegex) {
+            // 'g' để thay thế tất cả, 'i' không phân biệt hoa thường
             const flags = replaceAll ? 'gi' : 'i';
-            const regex = new RegExp(findInput, flags);
-            textarea.value = textarea.value.replace(regex, replaceInput);
+            regex = new RegExp(findInput, flags);
         } else {
+            // Biến đổi chuỗi thường thành regex an toàn
             const escapedFindInput = findInput.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-            const regex = new RegExp(escapedFindInput, replaceAll ? 'gi' : 'i');
-            textarea.value = textarea.value.replace(regex, replaceInput);
+            const flags = replaceAll ? 'gi' : 'i';
+            regex = new RegExp(escapedFindInput, flags);
         }
     } catch (e) {
-        alert("Lỗi Regex: " + e.message);
+        alert("Lỗi biểu thức chính quy (Regex): " + e.message);
+        return;
     }
+
+    const changes = [];
+    let replacementsMade = 0;
+
+    for (let i = 0; i < globalTextLines.length; i++) {
+        const originalLine = globalTextLines[i];
+        let newLine = originalLine;
+
+        if (replaceAll) {
+            if(regex.test(originalLine)){
+                newLine = originalLine.replace(regex, replaceInput);
+            }
+        } else { // Chỉ thay thế 1 lần đầu tiên tìm thấy trong toàn bộ văn bản
+            if (replacementsMade === 0 && regex.test(originalLine)) {
+                newLine = originalLine.replace(regex, replaceInput);
+                replacementsMade = 1;
+            }
+        }
+
+        if (originalLine !== newLine) {
+            changes.push({ line: i, before: originalLine, after: newLine });
+            globalTextLines[i] = newLine;
+        }
+    }
+
+    // Cập nhật lại chuỗi văn bản đầy đủ và làm mới view
+    fullGlobalText = globalTextLines.join('\n');
+    updateGlobalTextareaView();
+    renderChangeLog(changes);
+    log(`Đã thực hiện ${changes.length} thay đổi.`);
+}
+
+// Hàm lưu thay đổi được viết lại
+function saveGlobalChanges() {
+    // Văn bản đã được cập nhật trong biến fullGlobalText, không cần đọc từ textarea
+    globalEditedText = fullGlobalText;
+    
+    const editedParts = globalEditedText.split("\n\n");
+    if (editedParts.length === chunks.length) {
+        chunks.forEach((chunk, index) => {
+            chunk.translatedText = editedParts[index] || "";
+        });
+        log("Đã lưu và cập nhật nội dung các phần từ trình chỉnh sửa toàn bộ.");
+    } else {
+        log(`CẢNH BÁO: Số lượng đoạn sau khi sửa (${editedParts.length}) khác với số phần gốc (${chunks.length}). Thay đổi được lưu toàn cục nhưng không cập nhật lại từng phần.`);
+    }
+    
+    closeGlobalModal();
 }
 function clearLog() {
     if (logOutputEl) {
