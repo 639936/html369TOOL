@@ -579,7 +579,7 @@ async function translateSingleChunk(index) {
                 log(`LƯU Ý: Phần ${index + 1} bị cắt ngắn do MAX_TOKENS.`);
             } 
             // KHÔI PHỤC LẠI: KIỂM TRA ĐỘ DÀI KẾT QUẢ
-            else if ((result.data.length / chunkToSend.length) < 0.8) {
+            else if ((result.data.length / chunkToSend.length) < 0.7) {
                  errorMessage = `Kết quả trả về quá ngắn (tỷ lệ ${Math.round((result.data.length / chunkToSend.length) * 100)}%). Coi là lỗi.`;
                  log(`LƯU Ý: Phần ${index + 1} có kết quả ngắn bất thường.`);
             }
