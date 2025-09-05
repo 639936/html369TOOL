@@ -286,6 +286,8 @@ window.onload = function() {
     // Gán sự kiện
     fileInput.addEventListener('change', handleNewFile);
     sessionInput.addEventListener('change', handleSessionFile);
+    // Xóa log sau mỗi 3p
+    setInterval(clearLog, 3 * 60 * 1000);
 };
 
 function log(message) { if (logOutputEl) { logOutputEl.textContent += `[${new Date().toLocaleTimeString()}] ${message}\n`; logOutputEl.scrollTop = logOutputEl.scrollHeight; } console.log(message); }
