@@ -64,7 +64,7 @@
 </head>
 <body>
 
-<h1>Gemini Advanced Translation Testbed v6 (Auto-Save & Enhanced Editing)</h1>
+<h1>Gemini Advanced Translation Testbed v6</h1>
 
 <div class="main-container">
     <div class="column controls-column">
@@ -84,13 +84,13 @@
         <div class="card">
             <h2>2. Cài đặt Dịch & Luồng</h2>
             <div class="config-group">
-                <div><label for="chunkSize">Chunk Size:</label><input type="number" id="chunkSize" value="10000"></div>
+                <div><label for="chunkSize">Chunk Size:</label><input type="number" id="chunkSize" value="20000"></div>
                 <div><label for="minChunkSize">Min Last Chunk:</label><input type="number" id="minChunkSize" value="2000"></div>
                 <div><label for="temperature">Temperature:</label><input type="number" id="temperature" value="1.0" step="0.1"></div>
-                <div><label for="topP">Top P:</label><input type="number" id="topP" value="1.0" step="0.05"></div>
-                <div><label for="topK">Top K:</label><input type="number" id="topK" value="40"></div>
+                <div><label for="topP">Top P:</label><input type="number" id="topP" value="0.95" step="0.05"></div>
+                <div><label for="topK">Top K:</label><input type="number" id="topK" value="20"></div>
                 <div><label for="maxOutputTokens">Max Output Tokens:</label><input type="number" id="maxOutputTokens" value="65536"></div>
-                <div><label for="maxConcurrent">Luồng đồng thời:</label><input type="number" id="maxConcurrent" value="5" min="1" max="10"></div>
+                <div><label for="maxConcurrent">Luồng đồng thời:</label><input type="number" id="maxConcurrent" value="10" min="1" max="20"></div>
                 <div><label for="retryDelay">Delay Tự động (ms):</label><input type="number" id="retryDelay" value="5000"></div>
             </div>
              <div class="checkbox-group">
