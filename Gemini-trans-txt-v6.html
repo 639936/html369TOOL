@@ -55,16 +55,11 @@
         #progress-bar-container { width: 100%; background-color: #e9ecef; border-radius: 4px; overflow: hidden; margin-bottom: 10px; }
         #progress-bar { width: 0%; height: 20px; background-color: #28a745; text-align: center; line-height: 20px; color: white; font-weight: bold; transition: width 0.3s ease; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
-        .change-item { border-bottom: 1px solid #555; padding-bottom: 5px; margin-bottom: 5px; font-size: 12px; }
-        .change-item p { margin: 0 0 5px 0; font-weight: bold; }
-        .change-item pre { margin: 2px 0; padding: 2px 5px; border-radius: 3px; white-space: pre-wrap; word-wrap: break-word; }
-        .change-before { background-color: #5d282d; color: #ffc9cc; }
-        .change-after { background-color: #1c4a27; color: #c3e6cb; }
     </style>
 </head>
 <body>
 
-<h1>Gemini Advanced Translation Testbed v6</h1>
+<h1>Gemini Advanced Translation Testbed v6 (Auto-Save & Enhanced Editing)</h1>
 
 <div class="main-container">
     <div class="column controls-column">
@@ -84,13 +79,13 @@
         <div class="card">
             <h2>2. Cài đặt Dịch & Luồng</h2>
             <div class="config-group">
-                <div><label for="chunkSize">Chunk Size:</label><input type="number" id="chunkSize" value="20000"></div>
+                <div><label for="chunkSize">Chunk Size:</label><input type="number" id="chunkSize" value="10000"></div>
                 <div><label for="minChunkSize">Min Last Chunk:</label><input type="number" id="minChunkSize" value="2000"></div>
                 <div><label for="temperature">Temperature:</label><input type="number" id="temperature" value="1.0" step="0.1"></div>
-                <div><label for="topP">Top P:</label><input type="number" id="topP" value="0.95" step="0.05"></div>
-                <div><label for="topK">Top K:</label><input type="number" id="topK" value="20"></div>
+                <div><label for="topP">Top P:</label><input type="number" id="topP" value="1.0" step="0.05"></div>
+                <div><label for="topK">Top K:</label><input type="number" id="topK" value="40"></div>
                 <div><label for="maxOutputTokens">Max Output Tokens:</label><input type="number" id="maxOutputTokens" value="65536"></div>
-                <div><label for="maxConcurrent">Luồng đồng thời:</label><input type="number" id="maxConcurrent" value="10" min="1" max="20"></div>
+                <div><label for="maxConcurrent">Luồng đồng thời:</label><input type="number" id="maxConcurrent" value="5" min="1" max="10"></div>
                 <div><label for="retryDelay">Delay Tự động (ms):</label><input type="number" id="retryDelay" value="5000"></div>
             </div>
              <div class="checkbox-group">
@@ -101,12 +96,22 @@
         <div class="card">
             <h2>3. Tải File và Điều khiển</h2>
             <div><label for="promptSelect">Chọn Prompt:</label>
-                <select id="promptSelect">
+                <select id="promptSelect" onchange="loadSelectedPromptToEditor()">
                     <option value="vi_tieuchuan">Việt (Tiêu chuẩn)</option>
                     <option value="vi_sac">Việt (Truyện Sắc)</option>
                     <option value="vi_NameEng">Việt (Name English)</option>
                     <option value="vi_vietlai">Việt (Viết Lại Convert)</option>
                 </select>
+            </div>
+            <div style="margin-top: 10px;">
+                <button id="togglePromptBtn" class="small-btn view-btn" onclick="togglePromptEditor()">Chỉnh sửa Prompt</button>
+            </div>
+            <div id="prompt-editor-container" style="display: none; margin-top: 15px; border-top: 1px solid #ddd; padding-top: 10px;">
+                <label for="prompt-editor-textarea" style="font-weight: bold;">Nội dung Prompt đang chọn:</label>
+                <textarea id="prompt-editor-textarea" rows="15" oninput="savePromptChanges()" style="margin-top: 5px; font-family: sans-serif; font-size: 14px;"></textarea>
+                <p style="font-size: 12px; font-style: italic; margin-top: 5px;">
+                    Lưu ý: Thay đổi sẽ chỉ áp dụng cho phiên làm việc hiện tại và sẽ mất khi tải lại trang.
+                </p>
             </div>
             <div class="config-group">
                 <div><label for="fileInput">Tải file TXT mới:</label><input type="file" id="fileInput" accept=".txt"></div>
@@ -118,24 +123,6 @@
                 <button id="stopButton" class="stop-btn" onclick="stopTranslation()" disabled>Dừng hẳn</button>
             </div>
              <button id="pauseButton" class="pause-btn" onclick="togglePause()" disabled>Tạm dừng</button>
-        </div>
-        <div class="card">
-            <h2>4. Công cụ Debug Thủ công</h2>
-            <p style="font-size: 13px; margin-top: -10px; font-style: italic;">
-                Công cụ giúp bạn thao tác trực tiếp với dữ liệu của từng phần.
-            </p>
-            <div>
-                <label for="debugChunkIndex">Nhập số thứ tự Phần (N):</label>
-                <input type="number" id="debugChunkIndex" min="1" placeholder="Ví dụ: 5" style="margin-bottom: 10px;">
-            </div>
-            <div>
-                <label for="debugOverrideText">Nhập nội dung để ghi đè:</label>
-                <textarea id="debugOverrideText" rows="8" placeholder="Dán nội dung dịch mới vào đây..."></textarea>
-            </div>
-            <div class="config-group" style="margin-top: 10px;">
-                <button onclick="copyPinyinForDebug()" class="view-btn">Copy Phiên âm (N)</button>
-                <button onclick="overwriteTranslationForDebug()" class="retry-btn">Ghi đè & Cập nhật (N)</button>
-            </div>
         </div>
     </div>
 
@@ -151,11 +138,8 @@
                 <button id="downloadButton" class="download-btn" onclick="downloadResult()">Tải kết quả (.txt)</button>
             </div>
         </div>
-                <div class="card">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <h2>Log Chi Tiết</h2>
-                <button id="clearLogButton" class="small-btn stop-btn" onclick="clearLog()">Xóa Log</button>
-            </div>
+        <div class="card">
+            <h2>Log Chi Tiết</h2>
             <pre id="logOutput"></pre>
         </div>
     </div>
@@ -186,46 +170,22 @@
 </div>
 
 <!-- Modal để chỉnh sửa toàn bộ -->
-<!-- THAY THẾ TOÀN BỘ KHỐI DIV NÀY -->
 <div id="globalEditModal" class="modal-overlay">
-    <div class="modal-content" style="width: 95%; max-width: 1400px; margin: 2% auto;">
+    <div class="modal-content" style="width: 90%; max-width: 1200px; margin: 5% auto;">
         <div class="modal-header">
-            <h3 id="global-modal-title">Chỉnh sửa Toàn bộ Nội dung Nâng cao</h3>
+            <h3 id="global-modal-title">Chỉnh sửa Toàn bộ Nội dung</h3>
             <button class="stop-btn small-btn" onclick="closeGlobalModal()">Đóng</button>
         </div>
-        
-        <!-- Hàng điều khiển tìm kiếm & thay thế -->
         <div style="display: flex; gap: 10px; margin-bottom: 10px; align-items: center; flex-wrap: wrap;">
-            <input type="text" id="find-input" placeholder="Tìm kiếm..." style="flex: 2; min-width: 200px;">
-            <input type="text" id="replace-input" placeholder="Thay thế bằng..." style="flex: 2; min-width: 200px;">
-            <button class="small-btn view-btn" onclick="findAndReplace(false)">Thay thế 1</button>
+            <input type="text" id="find-input" placeholder="Tìm kiếm..." style="flex: 1; min-width: 150px;">
+            <input type="text" id="replace-input" placeholder="Thay thế bằng..." style="flex: 1; min-width: 150px;">
+            <button class="small-btn view-btn" onclick="findAndReplace(false)">Thay thế</button>
             <button class="small-btn retry-btn" onclick="findAndReplace(true)">Thay thế Tất cả</button>
             <div class="checkbox-group" style="margin-left: 10px;"><input type="checkbox" id="regex-checkbox"><label for="regex-checkbox">Dùng Regex</label></div>
         </div>
-
-        <!-- Hàng điều khiển hiển thị & phân trang -->
-        <div style="display: flex; gap: 15px; margin-bottom: 10px; align-items: center; background-color: #f8f9fa; padding: 8px; border-radius: 4px;">
-            <label for="display-percentage" style="margin-bottom: 0;">Hiển thị:</label>
-            <input type="number" id="display-percentage" value="10" min="1" max="100" style="width: 60px; padding: 4px;">
-            <span>%</span>
-            <button class="small-btn" onclick="applyDisplayPercentage()">Áp dụng</button>
-            <div style="margin-left: auto; display: flex; align-items: center; gap: 10px;">
-                <button class="small-btn" id="prev-page-btn" onclick="changeGlobalPage(-1)">&lt; Trang trước</button>
-                <span id="page-info">Trang 1 / 10</span>
-                <button class="small-btn" id="next-page-btn" onclick="changeGlobalPage(1)">Trang sau &gt;</button>
-            </div>
-        </div>
-        
-        <!-- Khu vực hiển thị nhật ký thay đổi -->
-        <div id="change-log-container" style="max-height: 150px; overflow-y: auto; background: #2d2d2d; color: white; padding: 10px; border-radius: 4px; margin-bottom: 10px; display: none;">
-            <h4>Nhật ký thay đổi:</h4>
-            <div id="change-log-content"></div>
-        </div>
-
-        <textarea id="global-modal-textarea" style="height: 55vh; background-color: #e9ecef;" readonly></textarea>
-        
+        <textarea id="global-modal-textarea" style="height: 60vh;"></textarea>
         <div class="modal-footer">
-            <button class="download-btn" onclick="saveGlobalChanges()">Lưu Toàn Bộ Thay Đổi và Đóng</button>
+            <button class="download-btn" onclick="saveGlobalChanges()">Lưu và Đóng</button>
         </div>
     </div>
 </div>
@@ -246,13 +206,13 @@ var hanVietMap = {
 // VÍ DỤ: var prompts = { "vi_tieuchuan": "Bạn là chuyên gia...", ... };
 // =================================================================================
 var prompts = {
-    "vi_tieuchuan": "Bạn là chuyên gia viết lại văn học. Diễn giải và viết lại văn bản phiên âm Hán-Việt (convert) thành truyện tiếng Việt tự nhiên, giàu cảm xúc. TUYỆT ĐỐI KHÔNG DỊCH TỪNG TỪ.\n\n## Quy tắc:\n1.  **Đại từ:**\n    -   Đối thoại: Dùng 'ta' và 'ngươi'.\n    -   Ngôi thứ 3: Suy luận giới tính để dùng 'hắn' (nam), 'nàng' (nữ).\n    -   Cấm: 'tôi', 'bạn', 'anh', 'em'.\n    -   **ƯU TIÊN Áp dụng bảng chuyển đổi Đại Từ sau:**\n        | ngã -> ta | nhĩ -> ngươi | nâm -> ngài | (他)tha -> hắn | (她)tha -> nàng | (它)tha -> nó | ngã môn / cha môn -> chúng ta | nhĩ môn -> các ngươi | nâm môn -> các ngài | (她)tha môn -> các nàng | (它)tha môn -> bọn họ / bọn nó / bọn chúng | tự kỷ / tự cá nhi -> chính mình / bản thân | nhĩ tự kỷ -> chính ngươi | biệt nhân / tha nhân / bàng nhân -> người khác | đại gia hỏa nhi / đại hỏa nhi -> mọi người | gia vị -> chư vị | đồng học -> bạn học | đồng học môn -> các bạn học | lão sư -> lão sư | lão sư môn -> các lão sư | ca -> ca | đệ -> đệ | thúc -> thúc | cữu -> cữu | di / a di -> di / a di | nãi nãi -> nãi nãi | mụ mụ -> mụ mụ | gia gia -> gia gia | lão bản -> lão bản | nữ sĩ -> nữ sĩ |\n2.  **Từ ngữ:** Ưu tiên dùng thành ngữ, từ thuần Việt để tăng tính nghệ thuật.\n3.  **Dịch thuật tên (QUAN TRỌNG):**\n    -   **Dịch sang tiếng Anh NẾU:** Tên là phiên âm, vô nghĩa khi ghép lại, thường dài (≥ 3 âm tiết). VD: 'Áo Lợi Duy Á' -> 'Olivia'.\n    -   **Giữ nguyên Hán-Việt NẾU:** Tên có cấu trúc Á Đông (Họ + Tên) hoặc có nghĩa. VD: 'Vương Lâm' -> 'Vương Lâm'.\n4.  **Tên riêng khác:** Giữ nguyên 100% tên địa danh, công pháp, vật phẩm (Thanh Vân Kiếm, Hắc Ám Sâm Lâm).\n4.  **Đầu ra:** Chỉ trả về văn bản tiếng Việt đã chỉnh sửa, không có markdown, giữ nguyên cấu trúc đoạn, nếu là số thứ tự của chương thì phải để dạng Chương + số. Chỉ trả về kết quả sau khi xử lý xong",
+    "vi_tieuchuan": "Bạn là chuyên gia viết lại văn học. Diễn giải và viết lại văn bản phiên âm Hán-Việt (convert) thành truyện tiếng Việt tự nhiên, giàu cảm xúc. TUYỆT ĐỐI KHÔNG DỊCH TỪNG TỪ.\n\n## Quy tắc:\n1.  **Đại từ:**\n    -   Đối thoại: Dùng 'ta' và 'ngươi'.\n    -   Ngôi thứ 3: Suy luận giới tính để dùng 'hắn' (nam), 'nàng' (nữ).\n    -   Cấm: 'tôi', 'bạn', 'anh', 'em'.\n    -   **ƯU TIÊN Áp dụng bảng chuyển đổi sau:**\n        | ngã -> ta | nhĩ -> ngươi | nâm -> ngài | (他)tha -> hắn | (她)tha -> nàng | (它)tha -> nó | ngã môn / cha môn -> chúng ta | nhĩ môn -> các ngươi | nâm môn -> các ngài | (她)tha môn -> các nàng | (它)tha môn -> bọn họ / bọn nó / bọn chúng | tự kỷ / tự cá nhi -> chính mình / bản thân | nhĩ tự kỷ -> chính ngươi | biệt nhân / tha nhân / bàng nhân -> người khác | đại gia hỏa nhi / đại hỏa nhi -> mọi người | gia vị -> chư vị | đồng học -> bạn học | đồng học môn -> các bạn học | lão sư -> lão sư | lão sư môn -> các lão sư | ca -> ca | đệ -> đệ | thúc -> thúc | cữu -> cữu | di / a di -> di / a di | nãi nãi -> nãi nãi | mụ mụ -> mụ mụ | gia gia -> gia gia | lão bản -> lão bản | nữ sĩ -> nữ sĩ |\n2.  **Từ ngữ:** Ưu tiên dùng thành ngữ, từ thuần Việt để tăng tính nghệ thuật.\n3.  **Dịch thuật tên (QUAN TRỌNG):**\n    -   **Dịch sang tiếng Anh NẾU:** Tên là phiên âm, vô nghĩa khi ghép lại, thường dài (≥ 3 âm tiết). VD: 'Áo Lợi Duy Á' -> 'Olivia'.\n    -   **Giữ nguyên Hán-Việt NẾU:** Tên có cấu trúc Á Đông (Họ + Tên) hoặc có nghĩa. VD: 'Vương Lâm' -> 'Vương Lâm'.\n4.  **Tên riêng khác:** Giữ nguyên 100% tên địa danh, công pháp, vật phẩm (Thanh Vân Kiếm, Hắc Ám Sâm Lâm).\n4.  **Đầu ra:** Chỉ trả về văn bản tiếng Việt đã chỉnh sửa, không có markdown, giữ nguyên cấu trúc đoạn, nếu là số thứ tự của chương thì phải để dạng Chương + số. Chỉ trả về kết quả sau khi xử lý xong",
 
-    "vi_sac": "Bạn là chuyên gia viết truyện người lớn. Viết lại văn bản phiên âm Hán-Việt (convert) thành truyện tiếng Việt với ngôn ngữ trần trụi, táo bạo, và đi sâu vào tâm lý. KHÔNG dịch từng từ.\n\n## Quy tắc:\n1.  **Ngôn ngữ:** Dùng từ ngữ thẳng, không né tránh (vd: 'lồn', 'cặc', 'địt') và mô tả chi tiết, trần trụi. Có thể dùng thành ngữ, từ thuần Việt để tăng tính nghệ thuật.\n2.  **Đại từ:**\n    -   Đối thoại: 'ta', 'ngươi'.\n    -   Ngôi thứ 3: 'hắn', 'nàng', 'gã', 'ả'.\n    -   **ƯU TIÊN Áp dụng bảng chuyển đổi Đại Từ sau:**\n        | ngã -> ta | nhĩ -> ngươi | nâm -> ngài | (他)tha -> hắn | (她)tha -> nàng | (它)tha -> nó | ngã môn / cha môn -> chúng ta | nhĩ môn -> các ngươi | nâm môn -> các ngài | (她)tha môn -> các nàng | (它)tha môn -> bọn họ / bọn nó / bọn chúng | tự kỷ / tự cá nhi -> chính mình / bản thân | nhĩ tự kỷ -> chính ngươi | biệt nhân / tha nhân / bàng nhân -> người khác | đại gia hỏa nhi / đại hỏa nhi -> mọi người | gia vị -> chư vị | đồng học -> bạn học | đồng học môn -> các bạn học | lão sư -> lão sư | lão sư môn -> các lão sư | ca -> ca | đệ -> đệ | thúc -> thúc | cữu -> cữu | di / a di -> di / a di | nãi nãi -> nãi nãi | mụ mụ -> mụ mụ | gia gia -> gia gia | lão bản -> lão bản | nữ sĩ -> nữ sĩ |\n3.  **Dịch thuật tên (QUAN TRỌNG):**\n    -   **Dịch sang tiếng Anh NẾU:** Tên là phiên âm, vô nghĩa khi ghép lại, thường dài (≥ 3 âm tiết). VD: 'Áo Lợi Duy Á' -> 'Olivia'.\n    -   **Giữ nguyên Hán-Việt NẾU:** Tên có cấu trúc Á Đông (Họ + Tên) hoặc có nghĩa. VD: 'Vương Lâm' -> 'Vương Lâm'.\n4.  **Tên riêng khác:** Giữ nguyên 100% tên địa danh, công pháp, vật phẩm (Thanh Vân Kiếm, Hắc Ám Sâm Lâm).\n4.  **Tâm lý:** Nhấn mạnh vào cảm xúc, ham muốn, sự giằng xé nội tâm của nhân vật.\n5.  **Đầu ra:** Chỉ trả về văn bản tiếng Việt, không có markdown, giữ cấu trúc đoạn, nếu là số thứ tự của chương thì phải để dạng Chương + số. Chỉ trả về kết quả sau khi xử lý xong",
+    "vi_sac": "Bạn là chuyên gia viết truyện người lớn. Viết lại văn bản phiên âm Hán-Việt (convert) thành truyện tiếng Việt với ngôn ngữ trần trụi, táo bạo, và đi sâu vào tâm lý. KHÔNG dịch từng từ.\n\n## Quy tắc:\n1.  **Ngôn ngữ:** Dùng từ ngữ thẳng, không né tránh (vd: 'lồn', 'cặc', 'địt') và mô tả chi tiết, trần trụi. Có thể dùng thành ngữ, từ thuần Việt để tăng tính nghệ thuật.\n2.  **Đại từ:**\n    -   Đối thoại: 'ta', 'ngươi'.\n    -   Ngôi thứ 3: 'hắn', 'nàng', 'gã', 'ả'.\n    -   **ƯU TIÊN Áp dụng bảng chuyển đổi sau:**\n        | ngã -> ta | nhĩ -> ngươi | nâm -> ngài | (他)tha -> hắn | (她)tha -> nàng | (它)tha -> nó | ngã môn / cha môn -> chúng ta | nhĩ môn -> các ngươi | nâm môn -> các ngài | (她)tha môn -> các nàng | (它)tha môn -> bọn họ / bọn nó / bọn chúng | tự kỷ / tự cá nhi -> chính mình / bản thân | nhĩ tự kỷ -> chính ngươi | biệt nhân / tha nhân / bàng nhân -> người khác | đại gia hỏa nhi / đại hỏa nhi -> mọi người | gia vị -> chư vị | đồng học -> bạn học | đồng học môn -> các bạn học | lão sư -> lão sư | lão sư môn -> các lão sư | ca -> ca | đệ -> đệ | thúc -> thúc | cữu -> cữu | di / a di -> di / a di | nãi nãi -> nãi nãi | mụ mụ -> mụ mụ | gia gia -> gia gia | lão bản -> lão bản | nữ sĩ -> nữ sĩ |\n3.  **Dịch thuật tên (QUAN TRỌNG):**\n    -   **Dịch sang tiếng Anh NẾU:** Tên là phiên âm, vô nghĩa khi ghép lại, thường dài (≥ 3 âm tiết). VD: 'Áo Lợi Duy Á' -> 'Olivia'.\n    -   **Giữ nguyên Hán-Việt NẾU:** Tên có cấu trúc Á Đông (Họ + Tên) hoặc có nghĩa. VD: 'Vương Lâm' -> 'Vương Lâm'.\n4.  **Tên riêng khác:** Giữ nguyên 100% tên địa danh, công pháp, vật phẩm (Thanh Vân Kiếm, Hắc Ám Sâm Lâm).\n4.  **Tâm lý:** Nhấn mạnh vào cảm xúc, ham muốn, sự giằng xé nội tâm của nhân vật.\n5.  **Đầu ra:** Chỉ trả về văn bản tiếng Việt, không có markdown, giữ cấu trúc đoạn, nếu là số thứ tự của chương thì phải để dạng Chương + số. Chỉ trả về kết quả sau khi xử lý xong",
 
-    "vi_NameEng": "Bạn là chuyên gia viết lại văn học. Diễn giải và viết lại văn bản phiên âm Hán-Việt (convert) thành truyện tiếng Việt tự nhiên, giàu cảm xúc. TUYỆT ĐỐI KHÔNG DỊCH TỪNG TỪ.\n\n## Quy tắc:\n1.  **Dịch thuật tên (QUAN TRỌNG):**\n    -   **Dịch sang tiếng Anh NẾU:** Tên là phiên âm, vô nghĩa khi ghép lại, thường dài (≥ 3 âm tiết). VD: 'Áo Lợi Duy Á' -> 'Olivia'.\n    -   **Giữ nguyên Hán-Việt NẾU:** Tên có cấu trúc Á Đông (Họ + Tên) hoặc có nghĩa. VD: 'Vương Lâm' -> 'Vương Lâm'.\n2.  **Tên riêng khác:** Giữ nguyên 100% tên địa danh, công pháp, vật phẩm (Thanh Vân Kiếm, Hắc Ám Sâm Lâm).\n3.  **Đại từ:**\n    -   Đối thoại: 'ta', 'ngươi'.\n    -   Ngôi thứ 3: 'hắn', 'nàng'.\n    -   **ƯU TIÊN Áp dụng bảng chuyển đổi Đại Từ sau:**\n        | ngã -> ta | nhĩ -> ngươi | nâm -> ngài | (他)tha -> hắn | (她)tha -> nàng | (它)tha -> nó | ngã môn / cha môn -> chúng ta | nhĩ môn -> các ngươi | nâm môn -> các ngài | (她)tha môn -> các nàng | (它)tha môn -> bọn họ / bọn nó / bọn chúng | tự kỷ / tự cá nhi -> chính mình / bản thân | nhĩ tự kỷ -> chính ngươi | biệt nhân / tha nhân / bàng nhân -> người khác | đại gia hỏa nhi / đại hỏa nhi -> mọi người | gia vị -> chư vị | đồng học -> bạn học | đồng học môn -> các bạn học | lão sư -> lão sư | lão sư môn -> các lão sư | ca -> ca | đệ -> đệ | thúc -> thúc | cữu -> cữu | di / a di -> di / a di | nãi nãi -> nãi nãi | mụ mụ -> mụ mụ | gia gia -> gia gia | lão bản -> lão bản | nữ sĩ -> nữ sĩ |\n4.  **Từ ngữ:** Dùng từ thuần Việt, thành ngữ.\n5.  **Đầu ra:** Chỉ trả về văn bản tiếng Việt, không có markdown, giữ cấu trúc đoạn, nếu là số thứ tự của chương thì phải để dạng Chương + số. Chỉ trả về kết quả sau khi xử lý xong",
+    "vi_NameEng": "Bạn là chuyên gia viết lại văn học. Diễn giải và viết lại văn bản phiên âm Hán-Việt (convert) thành truyện tiếng Việt tự nhiên, giàu cảm xúc. TUYỆT ĐỐI KHÔNG DỊCH TỪNG TỪ.\n\n## Quy tắc:\n1.  **Dịch thuật tên (QUAN TRỌNG):**\n    -   **Dịch sang tiếng Anh NẾU:** Tên là phiên âm, vô nghĩa khi ghép lại, thường dài (≥ 3 âm tiết). VD: 'Áo Lợi Duy Á' -> 'Olivia'.\n    -   **Giữ nguyên Hán-Việt NẾU:** Tên có cấu trúc Á Đông (Họ + Tên) hoặc có nghĩa. VD: 'Vương Lâm' -> 'Vương Lâm'.\n2.  **Tên riêng khác:** Giữ nguyên 100% tên địa danh, công pháp, vật phẩm (Thanh Vân Kiếm, Hắc Ám Sâm Lâm).\n3.  **Đại từ:**\n    -   Đối thoại: 'ta', 'ngươi'.\n    -   Ngôi thứ 3: 'hắn', 'nàng'.\n    -   **ƯU TIÊN Áp dụng bảng chuyển đổi sau:**\n        | ngã -> ta | nhĩ -> ngươi | nâm -> ngài | (他)tha -> hắn | (她)tha -> nàng | (它)tha -> nó | ngã môn / cha môn -> chúng ta | nhĩ môn -> các ngươi | nâm môn -> các ngài | (她)tha môn -> các nàng | (它)tha môn -> bọn họ / bọn nó / bọn chúng | tự kỷ / tự cá nhi -> chính mình / bản thân | nhĩ tự kỷ -> chính ngươi | biệt nhân / tha nhân / bàng nhân -> người khác | đại gia hỏa nhi / đại hỏa nhi -> mọi người | gia vị -> chư vị | đồng học -> bạn học | đồng học môn -> các bạn học | lão sư -> lão sư | lão sư môn -> các lão sư | ca -> ca | đệ -> đệ | thúc -> thúc | cữu -> cữu | di / a di -> di / a di | nãi nãi -> nãi nãi | mụ mụ -> mụ mụ | gia gia -> gia gia | lão bản -> lão bản | nữ sĩ -> nữ sĩ |\n4.  **Từ ngữ:** Dùng từ thuần Việt, thành ngữ.\n5.  **Đầu ra:** Chỉ trả về văn bản tiếng Việt, không có markdown, giữ cấu trúc đoạn, nếu là số thứ tự của chương thì phải để dạng Chương + số. Chỉ trả về kết quả sau khi xử lý xong",
 
-    "vi_vietlai": "Bạn là biên tập viên chuyên nghiệp. Biên tập lại văn bản 'convert' thô thành một tác phẩm tiếng Việt mượt mà, tự nhiên và dễ đọc.\n\n## Quy tắc:\n1.  **Làm mượt câu văn:** Viết lại các câu lủng củng, tối nghĩa cho trôi chảy.\n2.  **Việt hóa từ ngữ:** Thay thế các từ Hán-Việt khó hiểu, không cần thiết bằng từ thuần Việt tương đương.\n3.  **Đại từ:** Chỉnh sửa đại từ cho hợp lý, **ƯU TIÊN Áp dụng bảng chuyển đổi Đại Từ sau:**\n    | ngã -> ta | nhĩ -> ngươi | nâm -> ngài | (他)tha -> hắn | (她)tha -> nàng | (它)tha -> nó | ngã môn / cha môn -> chúng ta | nhĩ môn -> các ngươi | nâm môn -> các ngài | (她)tha môn -> các nàng | (它)tha môn -> bọn họ / bọn nó / bọn chúng | tự kỷ / tự cá nhi -> chính mình / bản thân | nhĩ tự kỷ -> chính ngươi | biệt nhân / tha nhân / bàng nhân -> người khác | đại gia hỏa nhi / đại hỏa nhi -> mọi người | gia vị -> chư vị | đồng học -> bạn học | đồng học môn -> các bạn học | lão sư -> lão sư | lão sư môn -> các lão sư | ca -> ca | đệ -> đệ | thúc -> thúc | cữu -> cữu | di / a di -> di / a di | nãi nãi -> nãi nãi | mụ mụ -> mụ mụ | gia gia -> gia gia | lão bản -> lão bản | nữ sĩ -> nữ sĩ |\n4.  **Bảo toàn nội dung:** Giữ nguyên cốt truyện, hành động và tên riêng.\n5.  **Đầu ra:** Chỉ trả về văn bản tiếng Việt đã biên tập, không có markdown, giữ cấu trúc đoạn, nếu là số thứ tự của chương thì phải để dạng Chương + số. Chỉ trả về kết quả sau khi xử lý xong",
+    "vi_vietlai": "Bạn là biên tập viên chuyên nghiệp. Biên tập lại văn bản 'convert' thô thành một tác phẩm tiếng Việt mượt mà, tự nhiên và dễ đọc.\n\n## Quy tắc:\n1.  **Làm mượt câu văn:** Viết lại các câu lủng củng, tối nghĩa cho trôi chảy.\n2.  **Việt hóa từ ngữ:** Thay thế các từ Hán-Việt khó hiểu, không cần thiết bằng từ thuần Việt tương đương.\n3.  **Đại từ:** Chỉnh sửa đại từ cho hợp lý.\n5.  **Đầu ra:** Chỉ trả về văn bản tiếng Việt đã biên tập, không có markdown, giữ cấu trúc đoạn, nếu là số thứ tự của chương thì phải để dạng Chương + số. Chỉ trả về kết quả sau khi xử lý xong",
 };
 
 
@@ -286,8 +246,6 @@ window.onload = function() {
     // Gán sự kiện
     fileInput.addEventListener('change', handleNewFile);
     sessionInput.addEventListener('change', handleSessionFile);
-    // Xóa log sau mỗi 3p
-    setInterval(clearLog, 3 * 60 * 1000);
 };
 
 function log(message) { if (logOutputEl) { logOutputEl.textContent += `[${new Date().toLocaleTimeString()}] ${message}\n`; logOutputEl.scrollTop = logOutputEl.scrollHeight; } console.log(message); }
@@ -726,240 +684,92 @@ function downloadResult() {
 }
 
 // CÁC HÀM MỚI CHO VIỆC CHỈNH SỬA TOÀN BỘ
-// =================================================================================
-// BIẾN TRẠNG THÁI MỚI CHO MODAL CHỈNH SỬA TOÀN BỘ
-// =================================================================================
-let fullGlobalText = "";      // Chuỗi chứa toàn bộ văn bản
-let globalTextLines = [];     // Mảng chứa các dòng của toàn bộ văn bản
-let currentPage = 1;          // Trang hiển thị hiện tại
-let totalPages = 1;           // Tổng số trang
-let linesPerPage = 100;       // Số dòng hiển thị trên một trang
-
-// =================================================================================
-// CÁC HÀM ĐÃ SỬA ĐỔI VÀ HÀM MỚI CHO MODAL CHỈNH SỬA TOÀN BỘ
-// =================================================================================
-
 function openGlobalModal() {
     if (!chunks.every(c => c.status === 'success')) {
         alert("Vui lòng dịch thành công tất cả các phần trước khi chỉnh sửa."); return;
     }
-    
-    // Nạp dữ liệu
-    fullGlobalText = chunks.map(c => c.translatedText).join("\n\n");
-    globalTextLines = fullGlobalText.split('\n');
-
-    // Reset trạng thái
-    currentPage = 1;
-    document.getElementById('change-log-container').style.display = 'none';
-    document.getElementById('change-log-content').innerHTML = '';
-    
-    // Cập nhật view
-    applyDisplayPercentage(); // Hàm này sẽ tính toán và gọi updateGlobalTextareaView
-    
-    document.getElementById('globalEditModal').style.display = 'block';
-    log("Đã mở trình chỉnh sửa toàn bộ nâng cao.");
+    const globalModal = document.getElementById('globalEditModal');
+    const globalTextarea = document.getElementById('global-modal-textarea');
+    globalTextarea.value = chunks.map(c => c.translatedText).join("\n\n");
+    globalModal.style.display = 'block';
+    log("Đã mở trình chỉnh sửa toàn bộ.");
 }
 
-function closeGlobalModal() {
-    document.getElementById('globalEditModal').style.display = 'none';
-    // Dọn dẹp để giải phóng bộ nhớ
-    fullGlobalText = "";
-    globalTextLines = [];
-}
+function closeGlobalModal() { document.getElementById('globalEditModal').style.display = 'none'; }
 
-// Cập nhật lại view của textarea dựa trên trang hiện tại
-function updateGlobalTextareaView() {
-    const textarea = document.getElementById('global-modal-textarea');
-    const pageInfo = document.getElementById('page-info');
-    const prevBtn = document.getElementById('prev-page-btn');
-    const nextBtn = document.getElementById('next-page-btn');
-
-    const startLine = (currentPage - 1) * linesPerPage;
-    const endLine = startLine + linesPerPage;
-    
-    const textToShow = globalTextLines.slice(startLine, endLine).join('\n');
-    textarea.value = textToShow;
-    textarea.scrollTop = 0; // Cuộn lên đầu mỗi khi chuyển trang
-
-    pageInfo.textContent = `Trang ${currentPage} / ${totalPages}`;
-    prevBtn.disabled = (currentPage === 1);
-    nextBtn.disabled = (currentPage === totalPages || totalPages === 0);
-}
-
-// Áp dụng khi người dùng thay đổi % hiển thị
-function applyDisplayPercentage() {
-    const percentage = parseInt(document.getElementById('display-percentage').value, 10);
-    if (isNaN(percentage) || percentage < 1 || percentage > 100) {
-        alert("Vui lòng nhập một số từ 1 đến 100.");
-        return;
-    }
-
-    const totalLines = globalTextLines.length;
-    linesPerPage = Math.max(1, Math.ceil(totalLines * (percentage / 100)));
-    totalPages = Math.max(1, Math.ceil(totalLines / linesPerPage));
-    currentPage = 1;
-
-    updateGlobalTextareaView();
-}
-
-// Chuyển trang trước/sau
-function changeGlobalPage(direction) {
-    const newPage = currentPage + direction;
-    if (newPage >= 1 && newPage <= totalPages) {
-        currentPage = newPage;
-        updateGlobalTextareaView();
-    }
-}
-
-// Ghi lại các thay đổi vào khu vực log
-function renderChangeLog(changes) {
-    const logContainer = document.getElementById('change-log-container');
-    const logContent = document.getElementById('change-log-content');
-
-    if (changes.length === 0) {
-        logContent.innerHTML = '<p style="color: #ffc107;">Không tìm thấy kết quả nào để thay thế.</p>';
-    } else {
-        logContent.innerHTML = changes.map(change => `
-            <div class="change-item">
-                <p>Dòng ${change.line + 1}:</p>
-                <pre class="change-before">- ${change.before.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</pre>
-                <pre class="change-after">+ ${change.after.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</pre>
-            </div>
-        `).join('');
-    }
-    logContainer.style.display = 'block';
-}
-
-
-// Hàm tìm kiếm và thay thế được viết lại hoàn toàn
-function findAndReplace(replaceAll = false) {
-    const findInput = document.getElementById('find-input').value;
-    const replaceInput = document.getElementById('replace-input').value;
-    const useRegex = document.getElementById('regex-checkbox').checked;
-    
-    if (!findInput) return;
-
-    let regex;
-    try {
-        if (useRegex) {
-            // 'g' để thay thế tất cả, 'i' không phân biệt hoa thường
-            const flags = replaceAll ? 'gi' : 'i';
-            regex = new RegExp(findInput, flags);
-        } else {
-            // Biến đổi chuỗi thường thành regex an toàn
-            const escapedFindInput = findInput.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-            const flags = replaceAll ? 'gi' : 'i';
-            regex = new RegExp(escapedFindInput, flags);
-        }
-    } catch (e) {
-        alert("Lỗi biểu thức chính quy (Regex): " + e.message);
-        return;
-    }
-
-    const changes = [];
-    let replacementsMade = 0;
-
-    for (let i = 0; i < globalTextLines.length; i++) {
-        const originalLine = globalTextLines[i];
-        let newLine = originalLine;
-
-        if (replaceAll) {
-            if(regex.test(originalLine)){
-                newLine = originalLine.replace(regex, replaceInput);
-            }
-        } else { // Chỉ thay thế 1 lần đầu tiên tìm thấy trong toàn bộ văn bản
-            if (replacementsMade === 0 && regex.test(originalLine)) {
-                newLine = originalLine.replace(regex, replaceInput);
-                replacementsMade = 1;
-            }
-        }
-
-        if (originalLine !== newLine) {
-            changes.push({ line: i, before: originalLine, after: newLine });
-            globalTextLines[i] = newLine;
-        }
-    }
-
-    // Cập nhật lại chuỗi văn bản đầy đủ và làm mới view
-    fullGlobalText = globalTextLines.join('\n');
-    updateGlobalTextareaView();
-    renderChangeLog(changes);
-    log(`Đã thực hiện ${changes.length} thay đổi.`);
-}
-
-// Hàm lưu thay đổi được viết lại
 function saveGlobalChanges() {
-    // Văn bản đã được cập nhật trong biến fullGlobalText, không cần đọc từ textarea
-    globalEditedText = fullGlobalText;
-    
+    const globalTextarea = document.getElementById('global-modal-textarea');
+    globalEditedText = globalTextarea.value;
     const editedParts = globalEditedText.split("\n\n");
     if (editedParts.length === chunks.length) {
-        chunks.forEach((chunk, index) => {
-            chunk.translatedText = editedParts[index] || "";
-        });
+        chunks.forEach((chunk, index) => { chunk.translatedText = editedParts[index] || ""; });
         log("Đã lưu và cập nhật nội dung các phần từ trình chỉnh sửa toàn bộ.");
     } else {
         log(`CẢNH BÁO: Số lượng đoạn sau khi sửa (${editedParts.length}) khác với số phần gốc (${chunks.length}). Thay đổi được lưu toàn cục nhưng không cập nhật lại từng phần.`);
     }
-    
     closeGlobalModal();
 }
-function clearLog() {
-    if (logOutputEl) {
-        logOutputEl.textContent = '';
-        log("Log đã được xóa."); 
+
+function findAndReplace(replaceAll = false) {
+    const findInput = document.getElementById('find-input').value;
+    const replaceInput = document.getElementById('replace-input').value;
+    const useRegex = document.getElementById('regex-checkbox').checked;
+    const textarea = document.getElementById('global-modal-textarea');
+    if (!findInput) return;
+
+    try {
+        if (useRegex) {
+            const flags = replaceAll ? 'gi' : 'i';
+            const regex = new RegExp(findInput, flags);
+            textarea.value = textarea.value.replace(regex, replaceInput);
+        } else {
+            const escapedFindInput = findInput.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+            const regex = new RegExp(escapedFindInput, replaceAll ? 'gi' : 'i');
+            textarea.value = textarea.value.replace(regex, replaceInput);
+        }
+    } catch (e) {
+        alert("Lỗi Regex: " + e.message);
     }
 }
-function copyPinyinForDebug() {
-    const indexInput = document.getElementById('debugChunkIndex').value;
-    if (!indexInput) {
-        log("Lỗi [Copy]: Vui lòng nhập số thứ tự Phần (N).");
-        return;
-    }
+// ================= DÁN KHỐI MÃ NÀY VÀO =================
 
-    const index = parseInt(indexInput, 10) - 1; 
-
-    if (isNaN(index) || index < 0 || index >= chunks.length) {
-        log(`Lỗi [Copy]: Số thứ tự Phần không hợp lệ. Vui lòng nhập số từ 1 đến ${chunks.length}.`);
-        return;
+/**
+ * Tải nội dung của prompt đang được chọn vào vùng soạn thảo.
+ */
+function loadSelectedPromptToEditor() {
+    // Chỉ thực hiện nếu vùng soạn thảo đang hiển thị
+    if (document.getElementById('prompt-editor-container').style.display === 'block') {
+        const promptKey = document.getElementById('promptSelect').value;
+        const editorTextarea = document.getElementById('prompt-editor-textarea');
+        if (prompts[promptKey]) {
+            editorTextarea.value = prompts[promptKey];
+        }
     }
-    if (!chunks[index].pinyinText) {
-         log(`Lỗi [Copy]: Phần #${index + 1} chưa được phiên âm (bạn cần chạy dịch ít nhất 1 lần).`);
-         return;
-    }
-
-    navigator.clipboard.writeText(chunks[index].pinyinText).then(() => {
-        log(`Thành công: Đã sao chép phiên âm của Phần #${index + 1} vào clipboard.`);
-    }).catch(err => {
-        log(`Lỗi [Copy]: Không thể sao chép vào clipboard. Lỗi: ${err}`);
-    });
 }
 
-function overwriteTranslationForDebug() {
-    const indexInput = document.getElementById('debugChunkIndex').value;
-    const newText = document.getElementById('debugOverrideText').value;
+function togglePromptEditor() {
+    const editorContainer = document.getElementById('prompt-editor-container');
+    const toggleButton = document.getElementById('togglePromptBtn');
 
-    if (!indexInput) {
-        log("Lỗi [Ghi đè]: Vui lòng nhập số thứ tự Phần (N).");
-        return;
+    const isHidden = editorContainer.style.display === 'none';
+
+    if (isHidden) {
+        editorContainer.style.display = 'block';
+        toggleButton.textContent = 'Đóng Trình sửa';
+        loadSelectedPromptToEditor(); 
+        log("Đã mở trình chỉnh sửa prompt.");
+    } else {
+        editorContainer.style.display = 'none';
+        toggleButton.textContent = 'Chỉnh sửa Prompt';
     }
-    if (!newText || !newText.trim()) {
-        log("Lỗi [Ghi đè]: Vui lòng nhập văn bản vào ô nội dung để ghi đè.");
-        return;
+}
+
+function savePromptChanges() {
+    const promptKey = document.getElementById('promptSelect').value;
+    const newText = document.getElementById('prompt-editor-textarea').value;
+    if (prompts[promptKey]) {
+        prompts[promptKey] = newText;
     }
-
-    const index = parseInt(indexInput, 10) - 1; 
-
-    if (isNaN(index) || index < 0 || index >= chunks.length) {
-        log(`Lỗi [Ghi đè]: Số thứ tự Phần không hợp lệ. Vui lòng nhập số từ 1 đến ${chunks.length}.`);
-        return;
-    }
-
-    chunks[index].translatedText = newText;
-    updateChunkStatus(index, 'success');
-    
-    log(`Thành công: Đã ghi đè nội dung và cập nhật trạng thái cho Phần #${index + 1}.`);
-    document.getElementById('debugOverrideText').value = '';
 }
 </script>
 
