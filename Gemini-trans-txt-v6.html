@@ -129,6 +129,24 @@
             </div>
              <button id="pauseButton" class="pause-btn" onclick="togglePause()" disabled>Tạm dừng</button>
         </div>
+        <div class="card">
+            <h2>4. Công cụ Debug Thủ công</h2>
+            <p style="font-size: 13px; margin-top: -10px; font-style: italic;">
+                Công cụ giúp bạn thao tác trực tiếp với dữ liệu của từng phần.
+            </p>
+            <div>
+                <label for="debugChunkIndex">Nhập số thứ tự Phần (N):</label>
+                <input type="number" id="debugChunkIndex" min="1" placeholder="Ví dụ: 5" style="margin-bottom: 10px;">
+            </div>
+            <div>
+                <label for="debugOverrideText">Nhập nội dung để ghi đè:</label>
+                <textarea id="debugOverrideText" rows="8" placeholder="Dán nội dung dịch mới vào đây..."></textarea>
+            </div>
+            <div class="config-group" style="margin-top: 10px;">
+                <button onclick="copyPinyinForDebug()" class="view-btn">Copy Phiên âm (N)</button>
+                <button onclick="overwriteTranslationForDebug()" class="retry-btn">Ghi đè & Cập nhật (N)</button>
+            </div>
+        </div>
     </div>
 
     <div class="column output-column">
@@ -953,12 +971,89 @@ function saveGlobalChanges() {
     }
     closeGlobalModal();
 }
-// ================= KẾT THÚC KHỐI MÃ CẦN THAY THẾ =================
+
 function clearLog() {
     if (logOutputEl) {
         logOutputEl.textContent = '';
         log("Log đã được xóa.");
     }
+}
+function loadSelectedPromptToEditor() {
+    if (document.getElementById('prompt-editor-container').style.display === 'block') {
+        const promptKey = document.getElementById('promptSelect').value;
+        const editorTextarea = document.getElementById('prompt-editor-textarea');
+        if (prompts[promptKey]) {
+            editorTextarea.value = prompts[promptKey];
+        }
+    }
+}
+
+function togglePromptEditor() {
+    const editorContainer = document.getElementById('prompt-editor-container');
+    const toggleButton = document.getElementById('togglePromptBtn');
+    const isHidden = editorContainer.style.display === 'none';
+    if (isHidden) {
+        editorContainer.style.display = 'block';
+        toggleButton.textContent = 'Đóng Trình sửa';
+        loadSelectedPromptToEditor();
+        log("Đã mở trình chỉnh sửa prompt.");
+    } else {
+        editorContainer.style.display = 'none';
+        toggleButton.textContent = 'Chỉnh sửa Prompt';
+    }
+}
+
+function savePromptChanges() {
+    const promptKey = document.getElementById('promptSelect').value;
+    const newText = document.getElementById('prompt-editor-textarea').value;
+    if (prompts[promptKey]) {
+        prompts[promptKey] = newText;
+    }
+}
+
+// CÁC HÀM CHO CÔNG CỤ DEBUG THỦ CÔNG
+function copyPinyinForDebug() {
+    const indexInput = document.getElementById('debugChunkIndex').value;
+    if (!indexInput) {
+        log("Lỗi [Copy]: Vui lòng nhập số thứ tự Phần (N).");
+        return;
+    }
+    const index = parseInt(indexInput, 10) - 1;
+    if (isNaN(index) || index < 0 || index >= chunks.length) {
+        log(`Lỗi [Copy]: Số thứ tự Phần không hợp lệ. Vui lòng nhập số từ 1 đến ${chunks.length}.`);
+        return;
+    }
+    if (!chunks[index].pinyinText) {
+         log(`Lỗi [Copy]: Phần #${index + 1} chưa được phiên âm (bạn cần chạy dịch ít nhất 1 lần).`);
+         return;
+    }
+    navigator.clipboard.writeText(chunks[index].pinyinText).then(() => {
+        log(`Thành công: Đã sao chép phiên âm của Phần #${index + 1} vào clipboard.`);
+    }).catch(err => {
+        log(`Lỗi [Copy]: Không thể sao chép vào clipboard. Lỗi: ${err}`);
+    });
+}
+
+function overwriteTranslationForDebug() {
+    const indexInput = document.getElementById('debugChunkIndex').value;
+    const newText = document.getElementById('debugOverrideText').value;
+    if (!indexInput) {
+        log("Lỗi [Ghi đè]: Vui lòng nhập số thứ tự Phần (N).");
+        return;
+    }
+    if (!newText || !newText.trim()) {
+        log("Lỗi [Ghi đè]: Vui lòng nhập văn bản vào ô nội dung để ghi đè.");
+        return;
+    }
+    const index = parseInt(indexInput, 10) - 1;
+    if (isNaN(index) || index < 0 || index >= chunks.length) {
+        log(`Lỗi [Ghi đè]: Số thứ tự Phần không hợp lệ. Vui lòng nhập số từ 1 đến ${chunks.length}.`);
+        return;
+    }
+    chunks[index].translatedText = newText;
+    updateChunkStatus(index, 'success');
+    log(`Thành công: Đã ghi đè nội dung và cập nhật trạng thái cho Phần #${index + 1}.`);
+    document.getElementById('debugOverrideText').value = '';
 }
 </script>
 
