@@ -139,13 +139,15 @@
             </div>
         </div>
         <div class="card">
-            <h2>Log Chi Tiết</h2>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h2>Log Chi Tiết</h2>
+                <button id="clearLogButton" class="small-btn stop-btn" onclick="clearLog()">Xóa Log</button>
+            </div>
             <pre id="logOutput"></pre>
         </div>
-    </div>
-</div>
+            </div>
+        </div>
 
-<!-- Modal để xem/sửa chunk -->
 <div id="editModal" class="modal-overlay">
     <div class="modal-content" style="width: 90%; max-width: 1200px; margin: 5% auto;">
         <div class="modal-header">
@@ -769,6 +771,12 @@ function savePromptChanges() {
     const newText = document.getElementById('prompt-editor-textarea').value;
     if (prompts[promptKey]) {
         prompts[promptKey] = newText;
+    }
+}
+function clearLog() {
+    if (logOutputEl) {
+        logOutputEl.textContent = '';
+        log("Log đã được xóa.");
     }
 }
 </script>
