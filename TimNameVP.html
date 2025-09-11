@@ -534,7 +534,7 @@ async function callGeminiApi() {
     if (!userPrompt) { alert("Vui lòng nhập yêu cầu (prompt) cho AI."); return; }
     if (!textAvailable) { alert("Không có văn bản hoặc kết quả tìm kiếm để gửi cho AI."); return; }
 
-
+    document.getElementById('aiResponseActions').style.display = 'none';
     document.getElementById('aiButton').disabled = true;
     document.getElementById('aiResponse').innerHTML = '<div class="loader"></div><span> Đang khởi tạo yêu cầu...</span>';
     
@@ -546,6 +546,7 @@ async function callGeminiApi() {
 async function tryNextApiKey(keyIndex, apiKeys, userPrompt) { // <--- Bỏ textToProcess ở đây
     const aiResponseDiv = document.getElementById('aiResponse');
     const aiButton = document.getElementById('aiButton');
+    const aiResponseActions = document.getElementById('aiResponseActions');
     const retryDelay = parseInt(document.getElementById('retryDelay').value, 10);
 
     // If we've run out of keys, stop.
@@ -554,6 +555,7 @@ async function tryNextApiKey(keyIndex, apiKeys, userPrompt) { // <--- Bỏ textT
         logEvent(finalError);
         aiResponseDiv.textContent = finalError;
         aiButton.disabled = false;
+        aiResponseActions.style.display = 'none';
         return;
     }
     
@@ -638,6 +640,7 @@ async function tryNextApiKey(keyIndex, apiKeys, userPrompt) { // <--- Bỏ textT
         
         logEvent("Phản hồi thành công:", true);
         logEvent(responseData, true);
+        aiResponseActions.style.display = 'block';
 
         if (responseData.candidates && responseData.candidates[0].finishReason === "SAFETY") {
              aiResponseDiv.textContent = "Thành công, nhưng phản hồi bị chặn vì lý do an toàn.";
@@ -646,6 +649,7 @@ async function tryNextApiKey(keyIndex, apiKeys, userPrompt) { // <--- Bỏ textT
             aiResponseDiv.textContent = aiText;
         } else {
             aiResponseDiv.textContent = `Yêu cầu thành công nhưng không có nội dung trả về. Phản hồi thô: ${JSON.stringify(responseData)}`;
+            aiResponseActions.style.display = 'none';
         }
         
         aiButton.disabled = false;
@@ -664,6 +668,7 @@ async function tryNextApiKey(keyIndex, apiKeys, userPrompt) { // <--- Bỏ textT
             logEvent(finalError);
             aiResponseDiv.textContent = finalError;
             aiButton.disabled = false;
+            aiResponseActions.style.display = 'none';
         }
     }
 }
