@@ -587,9 +587,17 @@ async function translateSingleChunk(index) {
             }
             // NẾU VƯỢT QUA CÁC BÀI KIỂM TRA
             else {
-                chunks[index].translatedText = result.data;
-                updateChunkStatus(index, 'success');
-                return true;
+                var textResult = result.data;
+                if (/[\u4e00-\u9fff]/.test(textResult)) {
+                    errorMessage = "Kết quả trả về vẫn chứa ký tự Hán. Coi là lỗi.";
+                    log(`LƯU Ý: Phần ${index + 1} có kết quả vẫn chứa ký tự Hán.`);
+                } else {
+                    // Thành công hoàn toàn
+                    log(`THÀNH CÔNG: Phần ${index + 1} dịch xong với Key ${i + 1}.`);
+                    chunks[index].translatedText = textResult;
+                    updateChunkStatus(index, 'success');
+                    return true;
+                }
             }
         }
         
