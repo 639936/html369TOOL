@@ -91,11 +91,11 @@
             <div class="config-group">
                 <div><label for="chunkSize">Chunk Size:</label><input type="number" id="chunkSize" value="10000"></div>
                 <div><label for="minChunkSize">Min Last Chunk:</label><input type="number" id="minChunkSize" value="2000"></div>
-                <div><label for="temperature">Temperature:</label><input type="number" id="temperature" value="1.0" step="0.1"></div>
-                <div><label for="topP">Top P:</label><input type="number" id="topP" value="1.0" step="0.05"></div>
-                <div><label for="topK">Top K:</label><input type="number" id="topK" value="40"></div>
+                <div><label for="temperature">Temperature:</label><input type="number" id="temperature" value="0.75" step="0.1"></div>
+                <div><label for="topP">Top P:</label><input type="number" id="topP" value="0.6" step="0.05"></div>
+                <div><label for="topK">Top K:</label><input type="number" id="topK" value="5"></div>
                 <div><label for="maxOutputTokens">Max Output Tokens:</label><input type="number" id="maxOutputTokens" value="65536"></div>
-                <div><label for="maxConcurrent">Luồng đồng thời:</label><input type="number" id="maxConcurrent" value="5" min="1" max="10"></div>
+                <div><label for="maxConcurrent">Luồng đồng thời:</label><input type="number" id="maxConcurrent" value="8" min="1" max="10"></div>
                 <div><label for="retryDelay">Delay Tự động (ms):</label><input type="number" id="retryDelay" value="5000"></div>
             </div>
              <div class="checkbox-group">
@@ -273,6 +273,7 @@ var prompts = {
 // PHẦN LOGIC CHÍNH CỦA TRANG WEB
 // =================================================================================
 let chunks = [], fullText = "", isPaused = false, shouldStopProcess = false, isTranslating = false, currentEditingChunkIndex = null, globalEditedText = null;
+let activeApiKeys = []; // Danh sách các key còn hoạt động trong phiên
 let logOutputEl, fileInput, sessionInput, startButton, stopButton, pauseButton, fileNameEl, chunkStatusContainer, actionButtons, retryAllButton, downloadButton, saveSessionButton, editModal, modalTitle, modalTextarea, modalOriginalText, editAllButton, progressBar;
 
 window.onload = function() {
@@ -529,7 +530,20 @@ async function callGeminiAPI_Browser(text, prompt, apiKey, model, genConfig) {
             }
             return { status: "error", message: `API không trả về nội dung hợp lệ`, rawResponse: result };
         } else {
-            return { status: "key_error", message: `Lỗi HTTP ${response.status}: ${result.error?.message || 'Không rõ'}`, rawResponse: result };
+            // KIỂM TRA LỖI QUOTA ĐẶC BIỆT (429)
+            if (response.status === 429 && result.error?.status === "RESOURCE_EXHAUSTED" && result.error?.details?.[0]?.violations?.[0]?.quotaValue === "50") {
+                return {
+                    status: "quota_exhausted", // Trả về trạng thái mới
+                    message: `Lỗi Quota 429: ${result.error?.message || 'Key đã hết hạn mức 50/ngày.'}`,
+                    rawResponse: result
+                };
+            }
+            // Giữ lại xử lý cho các lỗi key khác (vd: 400 Bad Request)
+            return {
+                status: "key_error",
+                message: `Lỗi HTTP ${response.status}: ${result.error?.message || 'Không rõ'}`,
+                rawResponse: result
+            };
         }
     } catch (e) {
         const errorResponse = { error: { message: e.toString(), details: "Lỗi mạng hoặc Javascript" } };
@@ -542,8 +556,7 @@ async function callGeminiAPI_Browser(text, prompt, apiKey, model, genConfig) {
 async function translateSingleChunk(index) {
     if (chunks[index].status === 'success' || chunks[index].status === 'translating' || shouldStopProcess) return;
     updateChunkStatus(index, 'translating');
-    
-    const apiKeys = document.getElementById('apiKeys').value.split('\n').filter(Boolean);
+
     const modelToUse = document.getElementById('modelSelect').value;
     const selectedPromptKey = document.getElementById('promptSelect').value;
     const selectedPrompt = prompts[selectedPromptKey];
@@ -560,66 +573,67 @@ async function translateSingleChunk(index) {
     } else if (chunks[index].pinyinText) {
         chunkToSend = chunks[index].pinyinText;
     }
-    
-    const keyStartIndex = chunks[index].apiKeyStartIndex || 0;
-    const keysToTry = apiKeys.slice(keyStartIndex).concat(apiKeys.slice(0, keyStartIndex));
-    
+
     let keyErrors = [];
-    for (let i = 0; i < keysToTry.length; i++) {
+    
+    // THAY ĐỔI: Chuyển từ vòng lặp FOR sang vòng lặp WHILE để kiểm soát chỉ số tốt hơn.
+    let i = 0;
+    while (i < activeApiKeys.length) {
         if (shouldStopProcess) return false;
-        const apiKeyToUse = keysToTry[i];
-        log(`  -> Phần ${index + 1}: Thử với Key ${i + 1}/${keysToTry.length} (${apiKeyToUse}...)`);
+        
+        const apiKeyToUse = activeApiKeys[i];
+        log(`  -> Phần ${index + 1}: Thử với Key #${i + 1} (${apiKeyToUse.substring(0, 4)}.../${activeApiKeys.length} keys còn lại)`);
         
         const result = await callGeminiAPI_Browser(chunkToSend, selectedPrompt, apiKeyToUse, modelToUse, genConfig);
         log(`  -> Phản hồi JSON cho Phần ${index + 1}:\n${JSON.stringify(result.rawResponse, null, 2)}`);
         
+        if (result.status === "quota_exhausted") {
+            log(`LỖI QUOTA: Key #${i + 1} (${apiKeyToUse.substring(0, 4)}...) đã hết hạn mức. Loại bỏ khỏi phiên làm việc này.`);
+            keyErrors.push(`  + Key ${i + 1}: ${result.message}`);
+            
+            // Loại bỏ key tại vị trí hiện tại.
+            activeApiKeys.splice(i, 1);
+            
+            // QUAN TRỌNG: KHÔNG tăng `i` lên, để lần lặp tiếp theo sẽ kiểm tra phần tử mới đã dồn lên vị trí `i` hiện tại.
+            if (!shouldStopProcess) { await delay(1000); }
+            continue; // Bỏ qua phần còn lại của vòng lặp và bắt đầu lại với chỉ số `i` cũ.
+        }
+
         let errorMessage = result.message;
         if (result.status === "success") {
-            // KIỂM TRA LỖI MAX_TOKENS
             if (result.finishReason === 'MAX_TOKENS') {
                 errorMessage = "Dịch bị cắt ngắn do đạt giới hạn token tối đa (MAX_TOKENS).";
                 log(`LƯU Ý: Phần ${index + 1} bị cắt ngắn do MAX_TOKENS.`);
             } 
-            // KHÔI PHỤC LẠI: KIỂM TRA ĐỘ DÀI KẾT QUẢ
             else if ((result.data.length / chunkToSend.length) < 0.5) {
-                 errorMessage = `Kết quả trả về quá ngắn (tỷ lệ ${Math.round((result.data.length / chunkToSend.length) * 100)}%). Coi là lỗi.`;
-                 log(`LƯU Ý: Phần ${index + 1} có kết quả ngắn bất thường.`);
+                errorMessage = `Kết quả trả về quá ngắn (tỷ lệ ${Math.round((result.data.length / chunkToSend.length) * 100)}%). Coi là lỗi.`;
+                log(`LƯU Ý: Phần ${index + 1} có kết quả ngắn bất thường.`);
             }
-            // NẾU VƯỢT QUA CÁC BÀI KIỂM TRA
             else {
-                var textResult = result.data;
-                textResult = textResult.replace(/[\u4e00-\u9fff]/g, '').trim(); // Loại bỏ ký tự Hán nếu còn sót lại
-                chunks[index].translatedText = textResult;
+                chunks[index].translatedText = result.data;
                 updateChunkStatus(index, 'success');
-                log(`THÀNH CÔNG: Phần ${index + 1} dịch xong với Key ${i + 1}.`);
                 return true;
- /*               if (/[\u4e00-\u9fff]/.test(textResult)) {
-                    errorMessage = "Kết quả trả về vẫn chứa ký tự Hán. Coi là lỗi.";
-                    log(`LƯU Ý: Phần ${index + 1} có kết quả vẫn chứa ký tự Hán.`);
-                } else {
-                    // Thành công hoàn toàn
-                    log(`THÀNH CÔNG: Phần ${index + 1} dịch xong với Key ${i + 1}.`);
-                    chunks[index].translatedText = textResult;
-                    updateChunkStatus(index, 'success');
-                    return true;
-                }*/
             }
         }
         
         keyErrors.push(`  + Key ${i + 1}: ${errorMessage}`);
-        if (i < keysToTry.length - 1 && !shouldStopProcess) { await delay(1000); }
+        if (i < activeApiKeys.length - 1 && !shouldStopProcess) { await delay(1000); }
+        
+        // QUAN TRỌNG: Chỉ tăng `i` nếu không có key nào bị xóa.
+        i++;
     }
 
+    // Nếu vòng lặp kết thúc mà chưa thành công
     updateChunkStatus(index, 'failed', keyErrors.join('\n'));
-    log(`LỖI: Phần ${index + 1} thất bại với tất cả các API key.`);
+    log(`LỖI: Phần ${index + 1} thất bại với tất cả các API key còn lại.`);
     
     const isAutoRetry = document.getElementById('autoRetryCheckbox').checked;
-    if (isAutoRetry && !shouldStopProcess) {
+    if (isAutoRetry && !shouldStopProcess && activeApiKeys.length > 0) {
         const retryDelayMs = parseInt(document.getElementById('retryDelay').value, 10);
         updateChunkStatus(index, 'retrying', `Tự động thử lại sau ${retryDelayMs / 1000}s...`);
         await delay(retryDelayMs);
         if (!shouldStopProcess && chunks[index].status === 'retrying') {
-             translateSingleChunk(index); 
+            return translateSingleChunk(index);
         }
     }
     return false;
@@ -671,6 +685,8 @@ async function manageTranslationQueue() {
 async function startTranslation() {
     if (isTranslating || !fullText) return;
     log("================== BẮT ĐẦU PHIÊN DỊCH MỚI ==================");
+        // NẠP DANH SÁCH KEY KHI BẮT ĐẦU MỘT PHIÊN MỚI
+    activeApiKeys = document.getElementById('apiKeys').value.split('\n').filter(Boolean);
     isTranslating = true; isPaused = false; shouldStopProcess = false; globalEditedText = null;
     startButton.disabled = true; stopButton.disabled = false; pauseButton.disabled = false;
     pauseButton.textContent = "Tạm dừng"; pauseButton.classList.remove("paused");
