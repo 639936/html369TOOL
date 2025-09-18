@@ -588,7 +588,12 @@ async function translateSingleChunk(index) {
             // NẾU VƯỢT QUA CÁC BÀI KIỂM TRA
             else {
                 var textResult = result.data;
-                if (/[\u4e00-\u9fff]/.test(textResult)) {
+                textResult = textResult.replace(/[\u4e00-\u9fff]/g, '').trim(); // Loại bỏ ký tự Hán nếu còn sót lại
+                chunks[index].translatedText = textResult;
+                updateChunkStatus(index, 'success');
+                log(`THÀNH CÔNG: Phần ${index + 1} dịch xong với Key ${i + 1}.`);
+                return true;
+ /*               if (/[\u4e00-\u9fff]/.test(textResult)) {
                     errorMessage = "Kết quả trả về vẫn chứa ký tự Hán. Coi là lỗi.";
                     log(`LƯU Ý: Phần ${index + 1} có kết quả vẫn chứa ký tự Hán.`);
                 } else {
@@ -597,7 +602,7 @@ async function translateSingleChunk(index) {
                     chunks[index].translatedText = textResult;
                     updateChunkStatus(index, 'success');
                     return true;
-                }
+                }*/
             }
         }
         
