@@ -272,6 +272,8 @@ var prompts = {
 // =================================================================================
 // PHẦN LOGIC CHÍNH CỦA TRANG WEB
 // =================================================================================
+// Ngưỡng phần trăm tương đồng để coi là lỗi. Nếu tỷ lệ từ trùng lặp VƯỢT QUÁ số này, kết quả sẽ bị từ chối.
+const SIMILARITY_THRESHOLD = 50; // Tinh chỉnh số 50 này (ví dụ: 40, 60) tùy theo nhu cầu
 let chunks = [], fullText = "", isPaused = false, shouldStopProcess = false, isTranslating = false, currentEditingChunkIndex = null, globalEditedText = null;
 let activeApiKeys = []; // Danh sách các key còn hoạt động trong phiên
 let logOutputEl, fileInput, sessionInput, startButton, stopButton, pauseButton, fileNameEl, chunkStatusContainer, actionButtons, retryAllButton, downloadButton, saveSessionButton, editModal, modalTitle, modalTextarea, modalOriginalText, editAllButton, progressBar;
@@ -505,6 +507,58 @@ function retranslateChunkFromModal() {
     }
 }
 
+/**
+ * Tách một chuỗi văn bản thành một tập hợp (Set) các từ duy nhất, đã được chuẩn hóa (viết thường, bỏ dấu câu).
+ * @param {string} text - Văn bản đầu vào.
+ * @returns {Set<string>} - Một Set chứa các từ duy nhất.
+ */
+function getUniqueNormalizedWords(text) {
+    if (!text) return new Set();
+    const normalizedText = text
+        .toLowerCase()
+        // Loại bỏ các dấu câu phổ biến
+        .replace(/[.,!?"'();:“”]/g, ' ')
+        // Thay thế nhiều khoảng trắng hoặc dấu xuống dòng bằng một khoảng trắng duy nhất
+        .replace(/\s+/g, ' '); 
+    
+    // Tách thành từ và lọc ra các chuỗi rỗng có thể phát sinh
+    const words = normalizedText.split(' ').filter(word => word.length > 0);
+    return new Set(words);
+}
+
+/**
+ * Kiểm tra chất lượng bản dịch bằng cách so sánh độ tương đồng từ vựng với phiên âm gốc.
+ * @param {string} pinyinText - Văn bản phiên âm Hán-Việt.
+ * @param {string} translatedText - Văn bản đã dịch.
+ * @param {number} threshold - Ngưỡng phần trăm cho phép.
+ * @returns {boolean} - Trả về `true` nếu bản dịch hợp lệ, `false` nếu quá giống bản gốc.
+ */
+function isTranslationResultValid(pinyinText, translatedText, threshold) {
+    const pinyinWords = getUniqueNormalizedWords(pinyinText);
+    const translatedWords = getUniqueNormalizedWords(translatedText);
+
+    // Trường hợp đặc biệt: Nếu không có từ nào trong phiên âm, coi như hợp lệ để tránh lỗi chia cho 0
+    if (pinyinWords.size === 0) return true;
+
+    let commonWordsCount = 0;
+    // Đếm số từ trong bản dịch xuất hiện trong bản phiên âm
+    for (const word of translatedWords) {
+        if (pinyinWords.has(word)) {
+            commonWordsCount++;
+        }
+    }
+
+    // Tính tỷ lệ phần trăm các từ gốc vẫn còn sót lại trong bản dịch
+    const similarityPercentage = (commonWordsCount / pinyinWords.size) * 100;
+    
+    if (similarityPercentage > threshold) {
+        log(`  -> KIỂM TRA LỖI: Tỷ lệ từ trùng lặp là ${similarityPercentage.toFixed(1)}%, vượt ngưỡng cho phép ${threshold}%.`);
+        return false; // Không hợp lệ
+    }
+
+    return true; // Hợp lệ
+}
+
 async function callGeminiAPI_Browser(text, prompt, apiKey, model, genConfig) {
     if (!apiKey) { return { status: "error", message: "API Key không hợp lệ.", rawResponse: { error: "No API Key provided" } }; }
     const full_prompt = prompt + "\n\nDưới đây là văn bản cần xử lý\n\n" + text;
@@ -551,7 +605,6 @@ async function callGeminiAPI_Browser(text, prompt, apiKey, model, genConfig) {
     }
 }
 
-// Dán đoạn mã này để thay thế cho hàm translateSingleChunk hiện có
 
 async function translateSingleChunk(index) {
     if (chunks[index].status === 'success' || chunks[index].status === 'translating' || shouldStopProcess) return;
@@ -609,11 +662,16 @@ async function translateSingleChunk(index) {
                 errorMessage = `Kết quả trả về quá ngắn (tỷ lệ ${Math.round((result.data.length / chunkToSend.length) * 100)}%). Coi là lỗi.`;
                 log(`LƯU Ý: Phần ${index + 1} có kết quả ngắn bất thường.`);
             }
-            else {
-                chunks[index].translatedText = result.data;
-                updateChunkStatus(index, 'success');
-                return true;
+                        else if (!isTranslationResultValid(chunkToSend, result.data, SIMILARITY_THRESHOLD)) {
+                errorMessage = `Kết quả quá giống phiên âm gốc (vượt ngưỡng tương đồng ${SIMILARITY_THRESHOLD}%). Coi là lỗi.`;
+                log(`LƯU Ý: Phần ${index + 1} có kết quả không đạt chất lượng, yêu cầu dịch lại.`);
             }
+            // NẾU VƯỢT QUA TẤT CẢ BÀI KIỂM TRA
+                else {
+                    chunks[index].translatedText = result.data;
+                    updateChunkStatus(index, 'success');
+                    return true;
+                }
         }
         
         keyErrors.push(`  + Key ${i + 1}: ${errorMessage}`);
@@ -638,6 +696,7 @@ async function translateSingleChunk(index) {
     }
     return false;
 }
+
 
 async function manageTranslationQueue() {
     const MAX_CONCURRENT = parseInt(document.getElementById('maxConcurrent').value, 10);
