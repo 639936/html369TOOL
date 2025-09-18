@@ -307,7 +307,7 @@ function delay(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 function phienAmToHanViet(text) {
     if (!text || Object.keys(hanVietMap).length === 0) return text;
     let resultText = "";
-    text = text.replace(/大家伙儿/g, '**tất cả mọi người** ').replace(/我们/g, '**chúng ta** ').replace(/咱们/g, '**chúng ta** ').replace(/你们/g, '**các ngươi** ').replace(/她们/g, '**các nàng** ').replace(/它们/g, '**bọn chúng** ').replace(/他们/g, '**bọn họ** ').replace(/自己/g, '**bản thân** ').replace(/自个儿/g, '**chính mình** ').replace(/别人/g, '**người khác** ').replace(/他人/g, '**người khác** ');
+    text = text.replace(/大家伙儿/gi, '**tất cả mọi người** ').replace(/我们/gi, '**chúng ta** ').replace(/咱们/gi, '**chúng ta** ').replace(/你们/gi, '**các ngươi** ').replace(/她们/gi, '**các nàng** ').replace(/它们/gi, '**bọn chúng** ').replace(/他们/gi, '**bọn họ** ').replace(/自己/gi, '**bản thân** ').replace(/自个儿/gi, '**chính mình** ').replace(/别人/gi, '**người khác** ').replace(/他人/gi, '**người khác** ');
 
     for (let i = 0; i < text.length; i++) { const char = text[i]; resultText += hanVietMap[char] ? hanVietMap[char] + " " : char; }
     return resultText.trim();
