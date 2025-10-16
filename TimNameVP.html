@@ -127,7 +127,30 @@
                         <legend>Cấu hình</legend>
                         <div class="input-group">
                             <label for="geminiApiKeys">Google AI API Keys (mỗi key một dòng):</label>
-                            <textarea id="geminiApiKeys" rows="3"></textarea>
+                            <textarea id="geminiApiKeys" rows="3">AIzaSyBDUHswiHfWmhWfgw129gbFZ8FI8p49bm0
+AIzaSyBwPp5BKA6RyqXn8YbsNDt5UCgzBv2mvuQ
+AIzaSyA5eE1ZukNGzjC5uaR2amXVPMGO35H4nF0
+AIzaSyAeCjDYk-aNhkUMA1rioErd_56TGGIQyN8
+AIzaSyCcGTq6p6-0G2he8FwLftCS0Xpz8gDnOjI
+AIzaSyCw6te_UNNBHnsXFflFk0eUWCirjpYakqA
+AIzaSyBJnazTOjn-1t9RVp05lhsqzYDHnnWrleM
+AIzaSyDmGhtbY8_XKG3xgRczzLCUVOlR6l7a4sw
+AIzaSyDrMKhxWjF8hWBLvFJWPN1JmmCEqwwf1Jg
+AIzaSyD7QFbDMkRT2hl44ivmyszdazWI5kT_88Q
+AIzaSyBclsXqb-q097cUzYeIWDx5o53e4OjhGa8
+AIzaSyCbxFmJhrDURrVj7FwuyWQhZ9uYPlVtwQY
+AIzaSyDcUkX__sqArWtg8El1BgWcTAAk7snGWs0
+AIzaSyAbxEjurpGJZJgogiHRJm_GievC-ZIp2rA
+AIzaSyD2rGnXBGDKSgc0KVraY8_6H7x6ESmjKIA
+AIzaSyBo_tB4kKWJ8cqn7_x6iJMBi1RxB_FkrIc
+AIzaSyCWZuVP-VMg2xKtn-v4nZ0JnBXVcK5y74E
+AIzaSyAwBsV082dTEgO6LY3Fu8bNYKB5wmuoJmQ
+AIzaSyCRFluG5VbLYBE7E-T0lccYfb7fJKINuSs
+AIzaSyCCwxDldEJjNujCKWFRtbpOpvUZMuP5ZoE
+AIzaSyBj8Qr2mKk1zZ7YEYQeZCHC-aiVkmkoTJs
+AIzaSyAm1i6TrW9BA-XInO_WKQtcwIrDgxmlGJQ
+AIzaSyBOgOorQknIO2dMZvcKIIBV2-e2NyJoAjo
+AIzaSyBULWq4c-Zy49UsFPpxgY74hJBLkQCg4G0</textarea>
                         </div>
                         <div class="input-group">
                             <label for="geminiPrompt">Yêu cầu (Prompt):</label>
@@ -701,39 +724,61 @@ let stopWordsList = [
                 });
             }
 
-            // --- LOGIC MỚI CHO AI ---
+function getSelectedResultsForAI() {
+    const checkedBoxes = resultsList.querySelectorAll('.result-checkbox:checked');
+    const mainText = document.getElementById('main-text-input').value;
 
-            function getSelectedResultsForAI() {
-                const checkedBoxes = resultsList.querySelectorAll('.result-checkbox:checked');
+    // Tách văn bản gốc thành các dòng để tìm kiếm ngữ cảnh, chỉ làm một lần
+    const mainTextLines = mainText ? mainText.split('\n') : [];
 
-                // Sử dụng Set để tự động loại bỏ các dòng trùng lặp
-                const combinedLines = new Set();
+    // Sử dụng Set để tự động loại bỏ các dòng trùng lặp
+    const combinedLines = new Set();
 
-                // 1. Lấy kết quả từ danh sách đã lọc và tích chọn
-                checkedBoxes.forEach(function(checkbox) {
-                    const row = checkbox.closest('.result-row');
-                    const hanText = row.querySelector('.result-han').textContent;
-                    const phienAmText = row.querySelector('.result-phienam').textContent;
-                    combinedLines.add(`${hanText}=${phienAmText}`);
-                });
-
-                // 2. Lấy kết quả từ file import (nếu có)
-                if (importedNameContent) {
-                    const importedLines = importedNameContent.split('\n');
-                    importedLines.forEach(function(line) {
-                        if (line.trim()) { // Chỉ thêm các dòng không rỗng
-                            combinedLines.add(line.trim());
-                        }
-                    });
+    // 1. Lấy kết quả từ danh sách đã lọc và tìm ngữ cảnh
+    checkedBoxes.forEach(function(checkbox) {
+        const row = checkbox.closest('.result-row');
+        const hanText = row.querySelector('.result-han').textContent;
+        const phienAmText = row.querySelector('.result-phienam').textContent;
+        
+        let contextLine = null;
+        // Chỉ tìm ngữ cảnh nếu có văn bản gốc
+        if (mainTextLines.length > 0) {
+            for (const line of mainTextLines) {
+                // Tìm dòng đầu tiên chứa Hán tự và có độ dài >= 10
+                if (line.length >= 10 && line.includes(hanText)) {
+                    contextLine = line.trim();
+                    break; // Dừng lại khi tìm thấy dòng đầu tiên
                 }
-
-                if (combinedLines.size === 0) {
-                    return null;
-                }
-
-                // Chuyển Set trở lại thành chuỗi, mỗi mục một dòng
-                return Array.from(combinedLines).join('\n');
             }
+        }
+        
+        // Tạo chuỗi kết quả
+        let resultString = `${hanText}=${phienAmText}`;
+        if (contextLine) {
+            resultString += `\n* ngữ cảnh của ${hanText} : ${contextLine}*`;
+        }
+        combinedLines.add(resultString);
+    });
+
+    // 2. Lấy kết quả từ file import (nếu có)
+    // Biến `importedNameContent` được khai báo ở phần khác của code
+    if (typeof importedNameContent !== 'undefined' && importedNameContent) {
+        const importedLines = importedNameContent.split('\n');
+        importedLines.forEach(function(line) {
+            if (line.trim()) { // Chỉ thêm các dòng không rỗng
+                combinedLines.add(line.trim());
+            }
+        });
+    }
+
+    if (combinedLines.size === 0) {
+        return null;
+    }
+
+    // Chuyển Set trở lại thành chuỗi, mỗi mục cách nhau bằng một dòng trống
+    return Array.from(combinedLines).join('\n\n');
+}
+
 async function callGeminiApi() {
     const apiKeys = document.getElementById('geminiApiKeys').value.split('\n').map(k => k.trim()).filter(Boolean);
     const userPrompt = document.getElementById('geminiPrompt').value;
